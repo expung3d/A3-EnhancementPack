@@ -58,6 +58,12 @@ private _value = (str {
 	if(!isNil "MAZ_EP_fnc_addDiaryRecord") then {
 		["Suppression Effects", "When you are suppressed by enemies you will have a tunnel vision effect similar to that seen in Squad."] call MAZ_EP_fnc_addDiaryRecord;
 	};
+	if(!isNil "MAZ_EP_fnc_createNotification") then {
+		[
+			"Suppression System has been loaded! Bullets are way scarier now!",
+			"System Initialization Notification"
+		] spawn MAZ_EP_fnc_createNotification;
+	};
 	call MAZ_EP_fnc_suppressionCarrier;
 }) splitString "";
 

@@ -59,6 +59,12 @@ private _value = (str {
 	if(!isNil "MAZ_EP_fnc_addDiaryRecord") then {
 		["Increased Fuel Burn", "Vehicles will use much more fuel than before. This creates a need for land and air vehicles to return to base and refuel between missions."] call MAZ_EP_fnc_addDiaryRecord;
 	};
+	if(!isNil "MAZ_EP_fnc_createNotification") then {
+		[
+			"Increased Fuel Burn System has been loaded! In this economy?!",
+			"System Initialization Notification"
+		] spawn MAZ_EP_fnc_createNotification;
+	};
 	[] spawn MAZ_increaseFuelConsumptionInit;
 }) splitString "";
 

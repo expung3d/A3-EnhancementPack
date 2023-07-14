@@ -84,6 +84,197 @@ private _value = (str {
 			"optic_AMS_snd","Iron"
 		];
 
+		MAZ_ENV_strobeCompatibleHelmets = [
+			"H_HelmetHBK_headset_F",
+			"H_HelmetHBK_chops_F",
+			"H_HelmetHBK_ear_F",
+			"H_HelmetHBK_F",
+			"H_HelmetB",
+			"H_HelmetB_black",
+			"H_HelmetB_desert",
+			"H_HelmetB_grass",
+			"H_HelmetB_sand",
+			"H_HelmetB_snakeskin",
+			"H_HelmetB_tna_F",
+			"H_HelmetB_plain_wdl",
+			"H_HelmetSpecB",
+			"H_HelmetSpecB_blk",
+			"H_HelmetSpecB_paint2",
+			"H_HelmetSpecB_paint1",
+			"H_HelmetSpecB_sand",
+			"H_HelmetSpecB_snakeskin",
+			"H_HelmetB_Enh_tna_F",
+			"H_HelmetSpecB_wdl",
+			"H_HelmetB_light",
+			"H_HelmetB_light_black",
+			"H_HelmetB_light_desert",
+			"H_HelmetB_light_grass",
+			"H_HelmetB_light_sand",
+			"H_HelmetB_light_snakeskin",
+			"H_HelmetB_Light_tna_F",
+			"H_HelmetB_light_wdl",
+			"H_HelmetIA",
+			"H_HelmetB_TI_tna_F",
+			"H_HelmetB_TI_arid_F"
+		];
+
+		MAZ_ENV_fnc_createIRIlluminator = {
+			params [["_diffuse",false,[false]]];
+			private _light = player getVariable ["MAZ_ENV_irIllum",objNull];
+			if(!isNull _light) then {
+				deleteVehicle _light;
+				player setVariable ["MAZ_ENV_irIllum",objNull,true];
+			};
+			private _intensity = 5000;
+			if(_diffuse) then {
+				_intensity = _intensity * 0.25;
+			};
+			_light = "#lightreflector" createVehicle [0,0,0];
+			player setVariable ["MAZ_ENV_irIllum",_light,true];
+			[[_light,_intensity], {
+				params ["_light","_intensity"];
+				[_light,false] remoteExec ["setLightDayLight",0,_light];
+				[_light,true] remoteExec ["setLightIR",0,_light];
+				[_light,[1,1,1]] remoteExec ["setLightAmbient",0,_light];
+				[_light,false] remoteExec ["setLightUseFlare",0,_light];
+				[_light,_intensity] remoteExec ["setLightIntensity",0,_light];
+				[_light,[30,3,1.5]] remoteExec ["setLightConePars",0,_light];
+			}] remoteExec ['spawn',0,_light];
+			_light attachTo [player,[0.036,0.2,0.1],"proxy:\a3\characters_f\proxies\weapon.001",true];
+			comment 'player modelToWorld  (player selectionPosition "proxy:\a3\characters_f\proxies\weapon.001")';
+			_light spawn {
+				private _oldDiffuseMode = player getVariable ["MAZ_ENV_irIllumDiffuse",false];
+				while {!(isNull (player getVariable ["MAZ_ENV_irIllum",objNull]))} do {
+					private _currentWep = currentWeapon player;
+					private _attachments = player weaponAccessories _currentWep;
+					if !("acc_pointer_IR" in _attachments) exitWith {
+						call MAZ_ENV_fnc_deleteIRIlluminator;
+					};
+					private _diffuseMode = player getVariable ["MAZ_ENV_irIllumDiffuse",false];
+					if(_diffuseMode != _oldDiffuseMode) then {
+						_oldDiffuseMode = _diffuseMode;
+						private _intensity = 5000;
+						if(_oldDiffuseMode) then {
+							_intensity = _intensity * 0.25;
+						};
+						[[_this,_intensity], {
+							params ["_light","_intensity"];
+							[_light,false] remoteExec ["setLightDayLight",0,_light];
+							[_light,true] remoteExec ["setLightIR",0,_light];
+							[_light,[1,1,1]] remoteExec ["setLightAmbient",0,_light];
+							[_light,false] remoteExec ["setLightUseFlare",0,_light];
+							[_light,_intensity] remoteExec ["setLightIntensity",0,_light];
+							[_light,[30,3,1.5]] remoteExec ["setLightConePars",0,_light];
+						}] remoteExec ['spawn',0,_this];
+					};
+					sleep 0.1;
+				};
+			};
+		};
+
+		MAZ_ENV_fnc_deleteIRIlluminator = {
+			private _light = player getVariable ["MAZ_ENV_irIllum",objNull];
+			if(!isNull _light) then {
+				deleteVehicle _light;
+				player setVariable ["MAZ_ENV_irIllum",objNull,true];
+			};
+		};
+
+		MAZ_ENV_fnc_toggleIRIlluminator = {
+			private _currentWep = currentWeapon player;
+			private _attachments = player weaponAccessories _currentWep;
+			if !("acc_pointer_IR" in _attachments) exitWith {};
+			private _light = player getVariable ["MAZ_ENV_irIllum",objNull];
+			if(!isNull _light) then {
+				call MAZ_ENV_fnc_deleteIRIlluminator;
+			} else {
+				private _diffuseMode = player getVariable ["MAZ_ENV_irIllumDiffuse",false];
+				[_diffuseMode] call MAZ_ENV_fnc_createIRIlluminator;
+			};
+		};
+
+		MAZ_ENV_fnc_toggleIRIlluminatorDiffuseMode = {
+			private _diffuseMode = player getVariable ["MAZ_ENV_irIllumDiffuse",false];
+			player setVariable ["MAZ_ENV_irIllumDiffuse",!_diffuseMode];
+		};
+
+		MAZ_ENV_fnc_createAdminLight = {
+			params [["_ir",false,[false]]];
+			private _light = player getVariable ["MAZ_ENV_adminLight",objNull];
+			if(!isNull _light) then {
+				deleteVehicle _light;
+			};
+			private _showInDay = true;
+			private _lightColor = [0.5,0,0];
+			private _intensity = 50;
+			if(_ir) then {
+				_showInDay = false;
+				_lightColor = [1,1,1];
+				_intensity = 20;
+			};
+			_light = "#lightreflector" createVehicle [0,0,0];
+			player setVariable ["MAZ_ENV_adminLight",_light,true];
+			[_light,_showInDay] remoteExec ["setLightDayLight",0,_light];
+			[_light,_ir] remoteExec ["setLightIR",0,_light];
+			[_light,_lightColor] remoteExec ["setLightAmbient",0,_light];
+			[_light,_intensity] remoteExec ["setLightIntensity",0,_light];
+			[_light,[2,4,4,0,9,10]] remoteExec ["setLightAttenuation",0,_light];
+			[_light,[45,10,2.5]] remoteExec ["setLightConePars",0,_light];
+			_light attachTo [player, [0.3,-0.5,0.15], "head", true];
+			_light setDir -20;
+		};
+
+		MAZ_ENV_fnc_attachStrobeLightToHelmet = {
+			private _headGear = headgear player;
+			if (!(_headGear in MAZ_ENV_strobeCompatibleHelmets)) exitwith {["Not wearing a compatible helmet.","addItemFailed"] call MAZ_EP_fnc_systemMessage};			
+			private _currentLight = currentThrowable player select 0; 
+			private _currentLightClass = switch (_currentLight) do
+			{
+				case "B_IR_Grenade": {"B_IRStrobe"};
+				case "O_R_IR_Grenade";
+				case "O_IR_Grenade": {"O_IRStrobe"};
+				case "I_E_IR_Grenade";
+				case "I_IR_Grenade": {"I_IRStrobe"};
+				default {""}
+			}; 
+			if (_currentLightClass == "") exitWith {["Cannot attach your current grenade."] call MAZ_EP_fnc_systemMessage};
+			private _attachedLight = _currentLightClass createVehicle position player;
+			_attachedLight attachto [player, [0,-0.08,.125], 'pilot',true];
+			player removeItem _currentLight;
+		};
+		
+		MAZ_pointShootOnKeyDown = {
+			params ["_displayOrControl", "_key", "_shift", "_ctrl", "_alt"];
+			if(_key != 42) exitWith {};
+			if (!(missionNamespace getVariable ["MAZ_TAG_heldDown",false]) && !(missionNamespace getVariable ["MAZ_TAG_holdBreathCooldown",false])) then {
+				MAZ_TAG_heldDown = true;
+				player setCustomAimCoef 0.3;
+				MAZ_holdBreathTime = time;
+			};
+			if((time - MAZ_holdBreathTime) > 5 && !(missionNamespace getVariable ["MAZ_TAG_holdBreathCooldown",false])) then {
+				player setCustomAimCoef 1;
+				MAZ_TAG_holdBreathCooldown = true;
+				MAZ_TAG_heldDown = false;
+				0 = [] spawn {
+					sleep (4 + (random 3));
+					MAZ_TAG_holdBreathCooldown = false;
+					player setCustomAimCoef 1;
+				};
+			};
+		};
+
+		MAZ_pointShootOnKeyUp = {
+			params ["_displayOrControl", "_key", "_shift", "_ctrl", "_alt"];
+			if(_key != 42) exitWith {};
+			if (missionNamespace getVariable ["MAZ_TAG_heldDown",false]) then {
+				player setCustomAimCoef 1;
+				missionNamespace setVariable ["MAZ_TAG_heldDown",false];
+			};
+		};
+
+		MAZ_DEH_KeyDown_ENV_pointShoot = (findDisplay 46) displayAddEventHandler ["KeyDown", "_this call MAZ_pointShootOnKeyDown;"]; 
+		MAZ_DEH_KeyUp_ENV_pointShoot = (findDisplay 46) displayAddEventHandler ["KeyUp", "_this call MAZ_pointShootOnKeyUp;"]; 
+
 		addMissionEventHandler ["Draw3D", {
 			call {
 				comment "
@@ -181,9 +372,24 @@ private _value = (str {
 				player action ["nvGogglesOff", player];
 			};
 		}];
+
+		0 = [] spawn {
+			waitUntil {uisleep 0.1;!isNull (findDisplay 46) && alive player};
+			sleep 0.1;
+			waitUntil {!isNil "MAZ_fnc_newKeybind"};
+			MAZ_Key_ENV_ToggleIRIlluminator = ["Toggle IR Illuminator","Turn on or off the IR Illuminator.",38,{call MAZ_ENV_fnc_toggleIRIlluminator;},false,true] call MAZ_fnc_newKeybind;
+			MAZ_Key_ENV_ToggleIRIlluminatorDiffuseMode = ["Toggle IR Diffuser","Turn on or off the IR diffuser.",38,{call MAZ_ENV_fnc_toggleIRIlluminatorDiffuseMode;},false,false,true] call MAZ_fnc_newKeybind;
+			comment 'MAZ_Key_ENV_AttachLight = ["Attach Light","Attach current selected IR or chem Light to helmet.",35,{[] spawn MAZ_ENV_fnc_attachStrobeLightToHelmet;},false,false,true] call MAZ_fnc_newKeybind'; 
+		};
 	};
 	if(!isNil "MAZ_EP_fnc_addDiaryRecord") then {
 		["Enhanced Nightvision", "This makes NVGs more realistic by adding extra film grain when using them and preventing the use of magnified optics. With NVGs you will still be able to use 1x optics, however, zoomed optics aren't available. In addition, you will be forced into first person when using NVGs. Also, ENVGs have white phosphor tubes... because its cool."] call MAZ_EP_fnc_addDiaryRecord;
+	};
+	if(!isNil "MAZ_EP_fnc_createNotification") then {
+		[
+			"Enhanced Night Vision System has been loaded! Night Vision has more grain and you have IR illuminators now!",
+			"System Initialization Notification"
+		] spawn MAZ_EP_fnc_createNotification;
 	};
 	call MAZ_EP_fnc_enhancedNightVisionCarrier;
 }) splitString "";

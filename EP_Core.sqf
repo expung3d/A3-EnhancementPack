@@ -23,13 +23,13 @@ private _value = (str {
 			MAZ_isChangingKeybind = false;
 
 			MAZ_fnc_newKeybind = {
-				params ["_displayName","_description","_keyCode","_code",["_shift",false],["_ctrl",false],["_alt",false],["_zeusKeybind",false]];
+				params ["_displayName","_description","_keyCode","_code",["_shift",false],["_ctrl",false],["_alt",false],["_override",false],["_zeusKeybind",false]];
 				if(isNil "MAZ_KeybindData") then {
 					MAZ_KeybindData = [];
 				};
 				private _display = if(_zeusKeybind) then {findDisplay 312} else {findDisplay 46};
 
-				MAZ_KeybindData pushBack [_displayName,_description,_display,_keyCode,_code,[_shift,_ctrl,_alt]];
+				MAZ_KeybindData pushBack [_displayName,_description,_display,_keyCode,_code,[_shift,_ctrl,_alt],_override];
 			};
 
 			MAZ_fnc_removeKeybind = {
@@ -271,26 +271,36 @@ private _value = (str {
 				};
 				MAZ_Key_Keybinds46 = (findDisplay 46) displayAddEventHandler ["KeyDown",{
 					params ['_display', '_key', '_shift', '_ctrl', '_alt'];
+					private _doSkip = false;
 					{
-						_x params ["","","_displayBind","_keyCode","_code","_modifiers"];
+						_x params ["","","_displayBind","_keyCode","_code","_modifiers","_override"];
 						_modifiers params ["_isShift","_isCtrl","_isAlt"];
 						if(_shift == _isShift && _ctrl == _isCtrl && _alt == _isAlt && _key == _keyCode && _displayBind == _display && !MAZ_isChangingKeybind) then {
 							[] call _code;
+							if(_override) then {
+								_doSkip = true;
+							};
 						};
 					}forEach MAZ_KeybindData;
+					_doSkip
 				}];
 				if(!isNil "MAZ_Key_Keybinds312") then {
 					(findDisplay 46) displayRemoveEventHandler ["KeyDown",MAZ_Key_Keybinds312];
 				};
 				MAZ_Key_Keybinds312 = (findDisplay 312) displayAddEventHandler ["KeyDown",{
 					params ['_display', '_key', '_shift', '_ctrl', '_alt'];
+					private _doSkip = false;
 					{
-						_x params ["","","_displayBind","_keyCode","_code","_modifiers"];
+						_x params ["","","_displayBind","_keyCode","_code","_modifiers","_override"];
 						_modifiers params ["_isShift","_isCtrl","_isAlt"];
 						if(_shift == _isShift && _ctrl == _isCtrl && _alt == _isAlt && _key == _keyCode && _displayBind == _display && !MAZ_isChangingKeybind) then {
 							[] call _code;
+							if(_override) then {
+								_doSkip = true;
+							};
 						};
 					}forEach MAZ_KeybindData;
+					_doSkip
 				}];
 			};
 
@@ -316,7 +326,6 @@ private _value = (str {
 			'SmokeShellPurple',
 			'SmokeShellGreen'
 		];
-		publicVariable 'MAZ_smokeGrenades';
 
 		MAZ_fnc_earplugsLite = {
 			private _isEarplugsIn = player getVariable ['isEarplugsIn',false];
@@ -939,15 +948,17 @@ private _value = (str {
 			private _smokeType = _listBox lbText _smokeIndex;
 			private _smokeData = _listBox lbData _smokeIndex;
 			private _mags = magazines player;
-			switch (_smokeData) do {
-				case "White": {player removeMagazine "SmokeShell"; "SmokeShell" createVehicle position player;};
-				case "Red": {player removeMagazine "SmokeShellRed"; "SmokeShellRed" createVehicle position player;};
-				case "Orange": {player removeMagazine "SmokeShellOrange"; "SmokeShellOrange" createVehicle position player;};
-				case "Yellow": {player removeMagazine "SmokeShellYellow"; "SmokeShellYellow" createVehicle position player;};
-				case "Green": {player removeMagazine "SmokeShellGreen"; "SmokeShellGreen" createVehicle position player;};
-				case "Blue": {player removeMagazine "SmokeShellBlue"; "SmokeShellBlue" createVehicle position player;};
-				case "Purple": {player removeMagazine "SmokeShellPurple"; "SmokeShellPurple" createVehicle position player;};
+			private _magType = switch (_smokeData) do {
+				case "White": {"SmokeShell"};
+				case "Red": {"SmokeShellRed"};
+				case "Orange": {"SmokeShellOrange"};
+				case "Yellow": {"SmokeShellYellow"};
+				case "Green": {"SmokeShellGreen"};
+				case "Blue": {"SmokeShellBlue"};
+				case "Purple": {"SmokeShellPurple"};
 			};
+			player removeMagazine _magType;
+			_magType createVehicle position player;
 			uiNamespace getVariable ['dropSmokeMenu',displayNull] closeDisplay 0;
 		};
 
@@ -964,10 +975,10 @@ private _value = (str {
 			};
 			MAZ_Key_Earplugs = ["Toggle Earplugs","Toggle your earplugs.",207,{call MAZ_fnc_earplugsLite;},false,false] call MAZ_fnc_newKeybind;
 			MAZ_Key_Holster = ["Holster Weapon","Holster your weapon.",35,{[] spawn MAZ_fnc_holsterWeapon;},false,false] call MAZ_fnc_newKeybind;
-			MAZ_Key_ViewDist = ["Edit View Distance","Edit your view distance (Local).",73,{[] spawn MAZ_fnc_liteViewDistanceMenu;},false,false] call MAZ_fnc_newKeybind;
+			MAZ_Key_ViewDist = ["Edit View Distance","Edit your view distance (Local).",73,{[] spawn MAZ_fnc_liteViewDistanceMenu;},false,false,false,true] call MAZ_fnc_newKeybind;
 			MAZ_Key_Unflip = ["Unflip Vehicle","Unflip the vehicle you look at.",12,{[] spawn MAZ_liteUnflip;},false,true] call MAZ_fnc_newKeybind;
-			MAZ_Key_SitDown = ["Sit Down","Sit down in the chair.",208,{[] spawn MAZ_fnc_sitDown;},false,false] call MAZ_fnc_newKeybind;
-			MAZ_Key_StandUp = ["Stand Up","Stand up from the chair.",200,{[] spawn MAZ_fnc_standUp;},false,false] call MAZ_fnc_newKeybind;
+			MAZ_Key_SitDown = ["Sit Down","Sit down in the chair.",208,{[] spawn MAZ_fnc_sitDown;},false,false,false,true] call MAZ_fnc_newKeybind;
+			MAZ_Key_StandUp = ["Stand Up","Stand up from the chair.",200,{[] spawn MAZ_fnc_standUp;},false,false,false,true] call MAZ_fnc_newKeybind;
 			MAZ_Key_DeploySmoke = ["Deploy Smokes","Use smoke while injured.",57,{[] spawn MAZ_fnc_openSmokeGrenadeMenu;},false,false] call MAZ_fnc_newKeybind;
 
 			if(!isNil "MAZ_DEH_KeyDown_Jump") then {
@@ -1090,9 +1101,184 @@ private _value = (str {
 			};
 		};
 
+		MAZ_EP_fnc_createSystemSettingDialog = {
+			params [
+				["_systemName","Default System Name",[""]],
+				["_settingsData",[
+					["TOGGLE","Setting Name",[]]
+				],[[]]],
+				["_codeOnApply",{},[{}]]
+			];
+		};
+
+		MAZ_EP_fnc_addToExecQueue = {
+			params ["_parameters","_function"];
+			if(isNil "MAZ_EP_ExecQueueStarted") then {
+				MAZ_EP_ExecQueueStarted = false;
+			};
+			if(isNil "MAZ_EP_ExecQueue") then {
+				MAZ_EP_ExecQueue = [];
+			};
+			
+			MAZ_EP_ExecQueue pushBack [_parameters,_function];
+			if(!MAZ_EP_ExecQueueStarted) then {
+				MAZ_EP_ExecQueueStarted = true;
+				[] spawn MAZ_EP_fnc_startExecQueue;
+			};
+		};
+
+		MAZ_EP_fnc_startExecQueue = {
+			while {count MAZ_EP_ExecQueue > 0} do {
+				(MAZ_EP_ExecQueue select 0) params ["_parameters","_function"];
+				private _scriptHandle = _parameters spawn _function;
+				waitUntil {scriptDone _scriptHandle};
+				MAZ_EP_ExecQueue deleteAt 0;
+			};
+			MAZ_EP_ExecQueueStarted = false;
+		};
+
+		MAZ_EP_fnc_createNotification = {
+			params [["_text",""],["_title","System Notification"],["_duration",5],["_sound",""],["_image","a3\modules_f_curator\data\portraitradiochannelcreate_ca.paa"]];
+			if(_text == "") exitWith {};
+			private _activeNotifications = missionNamespace getVariable ["MAZ_EP_notifications",[]];
+
+			if(count _activeNotifications > 3) exitWith {
+				[[_text,_title,_duration,_sound,_image],{
+					sleep 0.1;
+					_this spawn MAZ_EP_fnc_createNotification;
+				}] call MAZ_EP_fnc_addToExecQueue;
+			};
+			getResolution params ["","","","","","_uiScale"];
+			private _scaleUI = switch (_uiScale) do {
+				case 0.47: {
+					0.8545454545454545;
+				};
+				case 0.55: {
+					1;
+				};
+				case 0.7: {
+					1.27273;
+				};
+				case 0.85: {
+					1.545454545454545;
+				};
+				case 1: {
+					2;
+				};
+			};
+			private _posY = ((0.159*_scaleUI) * safezoneH + safezoneY);
+			{
+				(ctrlPosition _x) params ["","","","_posH"];
+				_posY = _posY + _posH + 0.025;
+			}forEach _activeNotifications;
+
+			if(_sound != "") then {
+				playSound _sound;
+			};
+
+			with uiNamespace do {
+				private _display = findDisplay 46;
+				if(!isNull (findDisplay 312)) then {
+					_display = findDisplay 312;
+				};
+
+				private _contentGroup = _display ctrlCreate ["RscControlsGroupNoScrollbars",3010];
+				_contentGroup ctrlSetPosition [-1.3,_posY,0.3625,0];
+				_contentGroup ctrlCommit 0;
+
+				private _bg = _display ctrlCreate ["RscPicture",3020,_contentGroup];
+				_bg ctrlSetPosition [0,0,(0.149531*_scaleUI) * safezoneW,0];
+				_bg ctrlSetText "#(argb,8,8,3)color(0,0,0,0.7)";
+				_bg ctrlCommit 0;
+
+				private _label = _display ctrlCreate ["RscText",3030,_contentGroup];
+				_label ctrlSetPosition [0,0,(0.149531*_scaleUI) * safezoneW,(0.022*_scaleUI) * safezoneH];
+				_label ctrlSetTextColor (["GUI", "TITLETEXT_RGB"] call BIS_fnc_displayColorGet);
+				_label ctrlSetBackgroundColor (["GUI", "BCG_RGB"] call BIS_fnc_displayColorGet);
+				_label ctrlSetText _title;
+				_label ctrlCommit 0;
+
+				private _picture = _display ctrlCreate ["RscPicture",3040,_contentGroup];
+				_picture ctrlSetPosition [0.3375,0.005,(0.00825*_scaleUI) * safezoneW,(0.0165*_scaleUI) * safezoneH];
+				_picture ctrlSetText _image;
+				_picture ctrlCommit 0;
+
+				private _textCtrl = _display ctrlCreate ["RscStructuredText",3050,_contentGroup];
+				_textCtrl ctrlSetStructuredText parseText _text;
+				_textCtrl ctrlSetPosition [0,0.05,0.149531 * safezoneW,0.143 * safezoneH];
+				_textCtrl ctrlSetTextColor (["GUI", "TITLETEXT_RGB"] call BIS_fnc_displayColorGet);
+				_textCtrl ctrlSetBackgroundColor [0,0,0,0];
+				private _height = ((ceil ((count _text) / 40))) * (ctrlFontHeight _textCtrl);
+				_textCtrl ctrlSetPosition [0,0.05,(0.149531*_scaleUI) * safezoneW,_height];
+				_textCtrl ctrlCommit 0;
+				_height = _height + 0.065;
+
+				_contentGroup ctrlSetPositionH _height;
+				_contentGroup ctrlCommit 0;
+				_bg ctrlSetPositionH _height;
+				_bg ctrlCommit 0;
+				_contentGroup ctrlSetPosition [0.0101562 * safezoneW + safezoneX,_posY,(0.149531*_scaleUI) * safezoneW,_height];
+				_contentGroup ctrlCommit 0.5;
+
+				private _activeNotifications = missionNamespace getVariable ["MAZ_EP_notifications",[]];
+				_activeNotifications pushBack _contentGroup;
+				missionNamespace setVariable ["MAZ_EP_notifications",_activeNotifications];
+
+				private _fnc = missionNamespace getVariable "MAZ_EP_fnc_removeNotification";
+				sleep _duration;
+				[_contentGroup] spawn _fnc;
+			};
+		};
+
+		MAZ_EP_fnc_removeNotification = {
+			params ["_contentGroup"];
+			(ctrlPosition _contentGroup) params ["_posX","","","_posH"];
+			_contentGroup ctrlSetPositionX (_posX - 1);
+			_contentGroup ctrlCommit 0.5;
+
+			private _activeNotifications = missionNamespace getVariable ["MAZ_EP_notifications",[]];
+			private _index = _activeNotifications find _contentGroup;
+			_activeNotifications deleteAt _index;
+			missionNamespace setVariable ["MAZ_EP_notifications",_activeNotifications];
+		};
+
+		MAZ_EP_fnc_updateNotificationHeight = {
+			private _activeNotifications = missionNamespace getVariable ["MAZ_EP_notifications",[]];
+			private _posY = -0.12;
+			{
+				comment "This fixes jittering, but makes them move around more unpredictably. Not sure what is worse.";
+				comment "if !(ctrlCommitted _x) then {continue;}";
+				(ctrlPosition _x) params ["","_xPosY","","_posH"];
+				if(_xPosY != _posY) then {
+					_x ctrlSetPositionY _posY;
+					_x ctrlCommit 0.3;
+				};
+				_posY = _posY + _posH + 0.025;
+			}forEach _activeNotifications;
+		};
+
+		MAZ_EP_fnc_event_onNotificationCountChanged = {
+			private _oldCount = count (missionNamespace getVariable ["MAZ_EP_notifications",[]]);
+			MAZ_EP_notificationSystem = true;
+			while {MAZ_EP_notificationSystem} do {
+				private _notifications = missionNamespace getVariable ["MAZ_EP_notifications",[]];
+				if(count _notifications != _oldCount) then {
+					call MAZ_EP_fnc_updateNotificationHeight;
+				};
+				uiSleep 0.1;
+			};
+		};
+
 		call MAZ_EP_fnc_createBaseDiary;
 		["Core Pack","The Enhancement Pack Core adds the base functionality required for the rest of the EP. This adds the keybind framework and various other systems. To see all keybinds available, press CTRL + 0 (on your main keyboard)."] spawn MAZ_EP_fnc_addDiaryRecord;
-
+		
+		[] spawn MAZ_EP_fnc_event_onNotificationCountChanged;
+		[
+			"Enhancement Pack Core has been loaded! Press CTRL + 0 to view applicable keybinds.",
+			"System Initialization Notification",
+			12
+		] spawn MAZ_EP_fnc_createNotification;
+		
 		["Z.A.M. Server Enhancement Pack running!","addItemOk"] call MAZ_EP_fnc_systemMessage;
 		[] spawn MAZ_fnc_globalLaserMarkers;
 		[] spawn MAZ_fnc_addKeybinds;

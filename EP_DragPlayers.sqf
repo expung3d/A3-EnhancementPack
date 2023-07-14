@@ -334,6 +334,12 @@ private _value = (str {
 	if(!isNil "MAZ_EP_fnc_addDiaryRecord") then {
 		["Player Dragging", "You can drag injured friendlies and load them into vehicles. Allowing you to move them to safety before reviving them."] call MAZ_EP_fnc_addDiaryRecord;
 	};
+	if(!isNil "MAZ_EP_fnc_createNotification") then {
+		[
+			"Drag Players System has been loaded! You can now drag your injured friends to safety!",
+			"System Initialization Notification"
+		] spawn MAZ_EP_fnc_createNotification;
+	};
 	call MAZ_EP_fnc_dragPlayersCarrier;
 }) splitString "";
 

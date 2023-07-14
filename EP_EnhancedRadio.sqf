@@ -203,6 +203,12 @@ private _value = (str {
 	if(!isNil "MAZ_EP_fnc_addDiaryRecord") then {
 		["Enhanced Radio", "This makes radio noises happen when talking through global, side, command, and group channels. These sounds are audible to everyone around you, so when in PvP be aware of this."] call MAZ_EP_fnc_addDiaryRecord;
 	};
+	if(!isNil "MAZ_EP_fnc_createNotification") then {
+		[
+			"Enhanced Radio System has been loaded! Beep! Beep! Over!",
+			"System Initialization Notification"
+		] spawn MAZ_EP_fnc_createNotification;
+	};
 	call MAZ_fnc_enhancedRadioCarrier;
 }) splitString "";
 

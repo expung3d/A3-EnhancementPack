@@ -166,6 +166,12 @@ private _value = (str {
 	if(!isNil "MAZ_EP_fnc_addDiaryRecord") then {
 		["Sit on Quadbikes", "Allows players to sit on the front of quadbikes as an additional seat."] call MAZ_EP_fnc_addDiaryRecord;
 	};
+	if(!isNil "MAZ_EP_fnc_createNotification") then {
+		[
+			"Sit on Quadbikes System has been loaded! Now you can third wheel on a quadbike!",
+			"System Initialization Notification"
+		] spawn MAZ_EP_fnc_createNotification;
+	};
 	call MAZ_EP_fnc_quadbikesCarrier;
 }) splitString "";
 

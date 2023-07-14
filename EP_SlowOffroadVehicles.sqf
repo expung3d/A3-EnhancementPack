@@ -118,6 +118,12 @@ private _value = (str {
 	if(!isNil "MAZ_EP_fnc_addDiaryRecord") then {
 		["Slow Offroad Vehicles", "Vehicles will drive slower offroad and will have camera shake when doing so at high speeds."] call MAZ_EP_fnc_addDiaryRecord;
 	};
+	if(!isNil "MAZ_EP_fnc_createNotification") then {
+		[
+			"Slow Offroad Vehicles System has been loaded! Vehicles are way slower, they weren't meant for this abuse!",
+			"System Initialization Notification"
+		] spawn MAZ_EP_fnc_createNotification;
+	};
 	call MAZ_slowOffroadVehicleCarrier;
 }) splitString "";
 

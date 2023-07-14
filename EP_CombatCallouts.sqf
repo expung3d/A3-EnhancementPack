@@ -906,6 +906,12 @@ private _value = (str {
 	if(!isNil "MAZ_EP_fnc_addDiaryRecord") then {
 		["Combat Callouts", "Players will make callouts like 'Reloading!' and 'I need a medic' in appropriate contexts. This can help with noticing injured friendlies by audio ques rather than seeing them."] call MAZ_EP_fnc_addDiaryRecord;
 	};
+	if(!isNil "MAZ_EP_fnc_createNotification") then {
+		[
+			"Combat Callouts System has been loaded! Your character suddenly gained a voice box!",
+			"System Initialization Notification"
+		] spawn MAZ_EP_fnc_createNotification;
+	};
 	call MAZ_fnc_combatCalloutsCarrier;
 }) splitString "";
 

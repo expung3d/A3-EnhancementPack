@@ -303,6 +303,12 @@ private _value = (str {
 	if(!isNil "MAZ_EP_fnc_addDiaryRecord") then {
 		["Ambient Noises", "Around the map you will be able to hear various ambient noises. Dogs barking in towns, trees creaking in the woods, gas mask sounds while wearing them, etc. Generally meant to add immersion."] call MAZ_EP_fnc_addDiaryRecord;
 	};
+	if(!isNil "MAZ_EP_fnc_createNotification") then {
+		[
+			"Ambient Noises System has been loaded! The world is suddenly less soulless and empty!",
+			"System Initialization Notification"
+		] spawn MAZ_EP_fnc_createNotification;
+	};
 	
 	call MAZ_fnc_dogBarkingInTownCarrier;
 }) splitString "";

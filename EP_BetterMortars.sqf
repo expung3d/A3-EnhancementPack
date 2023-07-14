@@ -212,6 +212,12 @@ private _value = (str {
 	if(!isNil "MAZ_EP_fnc_addDiaryRecord") then {
 		["Balanced Mortars", "Mortars don't have artillery computers and require usage of a range card which makes fire inaccurate. In addition, when firing or near fired mortars your ears will ring. Ringing is reduced when using earplugs."] call MAZ_EP_fnc_addDiaryRecord;
 	};
+	if(!isNil "MAZ_EP_fnc_createNotification") then {
+		[
+			"Better Mortars System has been loaded! Mortars will now require a rangecard to be used accurately!",
+			"System Initialization Notification"
+		] spawn MAZ_EP_fnc_createNotification;
+	};
 	call MAZ_EP_fnc_mortarReBalanceCarrier;
 }) splitString "";
 

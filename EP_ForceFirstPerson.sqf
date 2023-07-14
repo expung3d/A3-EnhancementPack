@@ -44,6 +44,12 @@ private _value = (str {
 	if(!isNil "MAZ_EP_fnc_addDiaryRecord") then {
 		["Force First Person", "This is so self explanatory that if I need to explain it to you you shouldn't be here."] call MAZ_EP_fnc_addDiaryRecord;
 	};
+	if(!isNil "MAZ_EP_fnc_createNotification") then {
+		[
+			"Force First Person System has been loaded! You can't enter third person anymore!",
+			"System Initialization Notification"
+		] spawn MAZ_EP_fnc_createNotification;
+	};
 	call MAZ_fnc_forceFirstPersonCarrier;
 }) splitString "";
 

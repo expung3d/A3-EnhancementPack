@@ -54,16 +54,23 @@ private _value = (str {
 				private _unit = _x; 
 				private _vis1 = [objNull,"VIEW"] checkVisibility [eyePos _unit,_bangPosATL];
 				private _vis2 = [objNull,"VIEW"] checkVisibility [eyePos _unit,_bangPosASL];
-				if(((_vis1>0.03 || _vis2>0.03) && (_unit distance _bangPosATL) < 50) || (_unit distance _bangPosATL) < 1.5)then{
-					if(isPlayer _unit)then{
+
+				comment "TODO : Make unit fall over when damage is greater than a certain amount (Hit)";
+				comment "TODO : Make unit exit animation when killed (Killed)";
+				if(((_vis1>0.03 || _vis2>0.03) && (_unit distance _bangPosATL) < 50) || (_unit distance _bangPosATL) < 1.5) then {
+					if(isPlayer _unit) then {
 						[_unit] spawn MAZ_flashbangFlashed;
 					} else {
 						[[_unit], {
 							params ["_unit"];
-							[_unit,"Acts_CrouchingCoveringRifle01"]remoteExec["switchMove",0];
+							[_unit,"Acts_CrouchingCoveringRifle01"]remoteExec["switchMove"];
+							[_unit] call MAZ_FF_fnc_addUnitEventhandlers;
+							_unit setVariable ["MAZ_flash_canExit",true,true];
 							sleep 4+random 3;
-							[_unit,""]remoteExec["switchMove",0];
-							[_unit,"Crouch"] remoteExec ["playAction",0];
+							if(_unit getVariable ["MAZ_flash_canExit",true]) then {
+								[_unit,"amovpknlmstpsraswrfldnon"] remoteExec ["switchMove"];
+								[_unit] call MAZ_FF_fnc_removeUnitEventhandlers;
+							};
 						}] remoteExec ["spawn",_unit];
 					};
 				};
@@ -105,15 +112,92 @@ private _value = (str {
 				9 fadeSound 1;
 				9 fadeRadio 1;
 			};
-			[player,"Acts_CrouchingCoveringRifle01"] remoteExec ["switchMove",0]; 
+			[player,"Acts_CrouchingCoveringRifle01"] remoteExec ["switchMove"]; 
+			[player] call MAZ_FF_fnc_addUnitEventhandlers;
 			sleep 4+random 3; 
 			PP_wetD = ppEffectCreate ["WetDistortion",300];
 			PP_wetD ppEffectEnable true;
 			PP_wetD ppEffectAdjust [0,0,0,1,1,1,1,0.05,0.01,0.05,0.01,0.1,0.1,0.2,0.2];
 			PP_wetD ppEffectCommit 15;
-			[player,""] remoteExec ["switchMove",0];
-			[player,"Crouch"] remoteExec ["playAction",0];
+			if(player getVariable ["MAZ_flash_canExit",true]) then {
+				[player,"amovpknlmstpsraswrfldnon"] remoteExec ["switchMove"];
+				[player] call MAZ_FF_fnc_removeUnitEventhandlers;
+			};
 		};
+
+		MAZ_fnc_setRagdoll = {
+			params[
+				["_unit",objNull,[objNull]],
+				["_force",[0,0,0],[[]],[3]],
+				["_position","spine1",["string"]]
+			];
+
+			if(!(_unit isKindOf "Man"))exitWith{};
+
+			private _damageState = isDamageAllowed _unit;
+			if(_damageState)then{_unit allowDamage false};
+
+			private _pos =  (AGLtoASL(_unit modelToWorldVisual (_unit selectionPosition _position))) ;
+			private _collider = "Land_Can_V3_F" createVehicleLocal [0,0,0];
+			_collider setMass 10^10;
+			_collider setPosASL _pos;
+			_collider setVelocity _force;
+
+			private _pfhName = "bin_ragdoll" + name _unit;
+			[_pfhName, "onEachFrame",{
+				params["_tick","_unit","_collider","_damageState","_pfhName"];
+				if(time > _tick)then{
+					deleteVehicle _collider;
+					if(_damageState)then{_unit allowDamage true};
+					[_pfhName, "onEachFrame"] call BIS_fnc_removeStackedEventHandler;
+				};
+			}, [time+0.1,_unit,_collider,_damageState,_pfhName]] call BIS_fnc_addStackedEventHandler;
+		};
+
+		MAZ_FF_fnc_addUnitEventhandlers = {
+			params ["_unit"];
+			private _ehHit = _unit addEventHandler ["Dammaged",{
+				params ["_unit", "_selection", "_damage", "_hitIndex", "_hitPoint", "_shooter", "_projectile"];
+				if((damage _unit > 0.7 && alive _unit) || _damage > 0.2) then {
+					_unit setVariable ["MAZ_flash_canExit",false,true];
+					private _beh = behaviour _unit;
+					_unit setBehaviour "CARELESS";
+					[_unit,"amovpknlmstpsraswrfldnon"] remoteExec ["switchMove"];
+					[_unit,[0,0,6]] call MAZ_fnc_setRagdoll;
+					[_unit,_beh] spawn {
+						params ["_unit","_beh"];
+						sleep 0.1;
+						_unit setBehaviour _beh;
+						[_unit] call MAZ_FF_fnc_removeUnitEventhandlers;
+					};
+				};
+			}];
+			private _ehKilled = _unit addEventHandler ["Killed", {
+				params ["_unit", "_killer", "_instigator", "_useEffects"];
+				if(animationState _unit == "Acts_CrouchingCoveringRifle01") then {
+					_unit setVariable ["MAZ_flash_canExit",false,true];
+					[_unit,"amovpknlmstpsraswrfldnon"] remoteExec ["switchMove"];
+					[_unit] call MAZ_FF_fnc_removeUnitEventhandlers;
+				};
+			}];
+			_unit setVariable ["MAZ_flash_kill",_ehKilled,true];
+			_unit setVariable ["MAZ_flash_hit",_ehHit,true];
+		};
+
+		MAZ_FF_fnc_removeUnitEventhandlers = {
+			params ["_unit"];
+			private _ehKilled = _unit getVariable ["MAZ_flash_kill",-420];
+			private _ehHit = _unit getVariable ["MAZ_flash_hit",-420];
+			if(_ehKilled != -420) then {
+				_unit removeEventhandler ["Killed",_ehKilled];
+			};
+			if(_ehHit != -420) then {
+				_unit removeEventHandler ["Dammaged",_ehHit];
+			};
+			_unit setVariable ["MAZ_flash_kill",nil,true];
+			_unit setVariable ["MAZ_flash_hit",nil,true];
+		};
+
 		if(!isNil "MAZ_EH_FiredMan_FlashAndFrag") then {
 			player removeEventHandler ["FiredMan",MAZ_EH_FiredMan_FlashAndFrag];
 		};
@@ -153,6 +237,12 @@ private _value = (str {
 	};
 	if(!isNil "MAZ_EP_fnc_addDiaryRecord") then {
 		["Flash n' Frags", "Replaces the otherwise useless RGN grenades with flashbangs that will stun players and AI who are looking at the flash or within a certain distance. Adds physical fragmentation to RGO grenades, making them more lethal and scarier."] call MAZ_EP_fnc_addDiaryRecord;
+	};
+	if(!isNil "MAZ_EP_fnc_createNotification") then {
+		[
+			"Flash n' Frags System has been loaded! Watch out for extra fragmentation from grenades and flashbangs!",
+			"System Initialization Notification"
+		] spawn MAZ_EP_fnc_createNotification;
 	};
 	call MAZ_flashBangCarrier;
 }) splitString "";

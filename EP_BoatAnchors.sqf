@@ -193,6 +193,12 @@ private _value = (str {
 	if(!isNil "MAZ_EP_fnc_addDiaryRecord") then {
 		["Boat Anchors","Boats will have the ability to deploy anchors which will prevent the vehicle from moving from its position and from drifting away when stopped."] call MAZ_EP_fnc_addDiaryRecord;
 	};
+	if(!isNil "MAZ_EP_fnc_createNotification") then {
+		[
+			"Boat Anchors System has been loaded! All boats now have anchors to prevent them from drifting!",
+			"System Initialization Notification"
+		] spawn MAZ_EP_fnc_createNotification;
+	};
 	call MAZ_EP_fnc_boatAnchorsCarrier;
 }) splitString "";
 
