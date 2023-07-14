@@ -15,7 +15,7 @@ Creates a smooth notification, a maximum of three can be shown at one time.
 [
 	"Notification text",
 	"Notification title", //Notification title, default "System Notification"
-	5, //Duration in seconds, default 5
+	DURATION, //Duration in seconds, default 5
 	"Sound file", //Played sound, default "" (none)
 	"Image file" //Shown image in the title bar, default a radio icon
 ] call MAZ_EP_fnc_createNotification;
