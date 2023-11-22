@@ -70,7 +70,7 @@ Creates a new setting in the Enhancement Pack Settings system that can be modifi
 	"Setting Name",
 	"Setting Description\nShown as a tooltip in the settings menu.",
 	"VariableNameThatIsChanged", //This variable will be changed when the setting is changed
-	true, //Default value
+	true, //Default value. Boolean or number
 	"TYPE", //Toggle or Slider
 	[params] //Only used for Slider: [minValue, maxValue]
 ] call MAZ_EP_fnc_createNewSetting;
