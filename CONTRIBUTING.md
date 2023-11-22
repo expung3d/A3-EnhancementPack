@@ -1,3 +1,4 @@
+
 # Enhancement Pack Core Functions
 The Enhancement Pack has many built in functions to help with mission or script making. These can be used if the Core is running, no other systems are required.
 
@@ -60,4 +61,23 @@ if(!isNil "MAZ_EP_fnc_addDiaryRecord") then {
 		"System Description"
 	] call MAZ_EP_fnc_addDiaryRecord;
 };
+```
+
+## MAZ_EP_fnc_createNewSetting
+Creates a new setting in the Enhancement Pack Settings system that can be modified by Zeus. Settings can be changed by placing the Core composition down again and selecting OK. Settings that are changed will be synced to current and JIP players.
+```sqf
+[
+	"Setting Name",
+	"Setting Description\nShown as a tooltip in the settings menu.",
+	"VariableNameThatIsChanged", //This variable will be changed when the setting is changed
+	true, //Default value
+	"TYPE", //Toggle or Slider
+	[params] //Only used for Slider: [minValue, maxValue]
+] call MAZ_EP_fnc_createNewSetting;
+```
+
+## MAZ_EP_fnc_editSettings
+Opens the Enhancement Pack Settings system's editing menu. You can change the settings in this menu.
+```sqf
+call MAZ_EP_fnc_editSettings;
 ```
