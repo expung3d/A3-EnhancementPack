@@ -26,25 +26,62 @@ if(missionNamespace getVariable ["MAZ_EP_forcedFirstPersonEnabled",false]) exitW
 private _varName = "MAZ_System_EnhancementPack_1PP";
 private _myJIPCode = "MAZ_EPSystem_1PP_JIP";
 
-MAZ_EP_forcedFirstPersonEnabled = true;
-publicVariable 'MAZ_EP_forcedFirstPersonEnabled';
+["Force First Person","Whether to enable the Force First Person system.","MAZ_EP_forcedFirstPersonEnabled",true,"TOGGLE",[],"MAZ_FFP"] call MAZ_EP_fnc_addNewSetting;
+["Allow 3PP in Vehicles (All)","Whether to allow players to use third person while in vehicles.","MAZ_EP_FFP_AllowVehicle",false,"TOGGLE",[],"MAZ_FFP"] call MAZ_EP_fnc_addNewSetting;
+["Allow 3PP in Vehicles (Driver Only)","Whether to allow vehicle drivers to use third person, but not the crew.","MAZ_EP_FFP_DriverOnly",false,"TOGGLE",[],"MAZ_FFP"] call MAZ_EP_fnc_addNewSetting;
 
 private _value = (str {
 	MAZ_fnc_forceFirstPersonCarrier = {
-		MAZ_fnc_forceFirstPerson = {
-			while {MAZ_EP_forcedFirstPersonEnabled} do {
-				if(cameraView == "External") then {
-					player switchCamera "Internal";
-				};
-				sleep 0.1;
-			};
+		private _settings = ["MAZ_FFP"] call MAZ_EP_fnc_getSettingsFromSettingsGroup;
+		waitUntil {uiSleep 0.1; [_settings] call MAZ_EP_fnc_isSettingsGroupInitiliazed;};
+		MAZ_FFP_fnc_canEnter3PP = {
+			if !(MAZ_EP_forcedFirstPersonEnabled) exitWith {true};
+			private _veh = vehicle player;
+			if(_veh == player) exitWith {false};
+			if(MAZ_EP_FFP_AllowVehicle) exitWith {true};
+			if(MAZ_EP_FFP_DriverOnly && (driver _veh == player || currentPilot _veh == player)) exitWith {true};
+			false; 
 		};
-		[] spawn MAZ_fnc_forceFirstPerson;
+
+		if(!isNil "MAZ_FFP_DEH_KeyDown_ForceFirstPerson") then {
+			(findDisplay 46) displayRemoveEventHandler ["KeyDown",MAZ_FFP_DEH_KeyDown_ForceFirstPerson];
+		};
+		MAZ_FFP_DEH_KeyDown_ForceFirstPerson = (findDisplay 46) displayAddEventHandler ["KeyDown", {
+			params ["_display","_key"];
+			private _return = false;
+			if(_key in (actionKeys "personView") && !(call MAZ_FFP_fnc_canEnter3PP)) then {
+				_return = true;
+			};
+			_return
+		}];
+
+		if(!isNil "MAZ_FFP_EH_GetOutMan_3PP") then {
+			player removeEventHandler ["GetOutMan",MAZ_FFP_EH_GetOutMan_3PP];
+		};
+		MAZ_FFP_EH_GetOutMan_3PP = player addEventHandler ["GetOutMan", {
+			if(cameraView == "External" && !(call MAZ_FFP_fnc_canEnter3PP)) then {
+				player switchCamera "Internal";
+			};
+		}];
+		if(!isNil "MAZ_EH_SeatSwitchedMan_3PP") then {
+			player removeEventHandler ["SeatSwitchedMan",MAZ_EH_SeatSwitchedMan_3PP];
+		};
+		MAZ_EH_SeatSwitchedMan_3PP = player addEventHandler ["SeatSwitchedMan", {
+			if(cameraView == "External" && !(call MAZ_FFP_fnc_canEnter3PP)) then {
+				player switchCamera "Internal";
+			};
+		}];
+
+		if(cameraView == "External" && !(call MAZ_FFP_fnc_canEnter3PP)) then {
+			player switchCamera "Internal";
+		};
 	};
-	if(!isNil "MAZ_EP_fnc_addDiaryRecord") then {
+	[] spawn {
+		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_addDiaryRecord"};
 		["Force First Person", "This is so self explanatory that if I need to explain it to you you shouldn't be here."] call MAZ_EP_fnc_addDiaryRecord;
 	};
-	if(!isNil "MAZ_EP_fnc_createNotification") then {
+	[] spawn {
+		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_createNotification"};
 		[
 			"Force First Person System has been loaded! You can't enter third person anymore!",
 			"System Initialization Notification"

@@ -26,14 +26,13 @@ if(missionNamespace getVariable ["MAZ_EP_slowOffroadVehiclesEnabled",false]) exi
 private _varName = "MAZ_System_EnhancementPack_SOV";
 private _myJIPCode = "MAZ_EPSystem_SOV_JIP";
 
-MAZ_EP_slowOffroadVehiclesEnabled = true;
-publicVariable 'MAZ_EP_slowOffroadVehiclesEnabled';
-
-MAZ_EP_maxVehicleOffroadSpeed = 47;
-publicVariable "MAZ_EP_maxVehicleOffroadSpeed";
+["Slow Offroad Vehicles","Whether to enable the Slow Offroad Vehicles system.","MAZ_EP_slowOffroadVehiclesEnabled",true,"TOGGLE",[],"MAZ_SOV"] call MAZ_EP_fnc_addNewSetting;
+["Max Offroad Speed","The maximum speed vehicles can go while offroad.","MAZ_EP_maxVehicleOffroadSpeed",47,"SLIDER",[30,70],"MAZ_SOV"] call MAZ_EP_fnc_addNewSetting;
 
 private _value = (str {
 	MAZ_slowOffroadVehicleCarrier = {
+		private _settings = ["MAZ_SOV"] call MAZ_EP_fnc_getSettingsFromSettingsGroup;
+		waitUntil {uiSleep 0.1; [_settings] call MAZ_EP_fnc_isSettingsGroupInitiliazed;};
 		MAZ_fnc_camShakeWhenOffroad = {
 			private _speedVehicle = abs (speed (vehicle player));
 			private _fq = 0;
@@ -65,7 +64,7 @@ private _value = (str {
 		};
 
 		MAZ_fnc_offroadVehiclesLoopForServer = {
-			while{MAZ_EP_slowOffroadVehiclesEnabled} do {
+			while{MAZ_EP_CoreEnabled} do {
 				call MAZ_fnc_setupVehicles;
 				sleep 1;
 			};
@@ -86,6 +85,7 @@ private _value = (str {
 		MAZ_fnc_offroadPerVehicleLoop = {
 			params ["_vehicle"];
 			while{!isNull _vehicle && alive _vehicle} do {
+				if(!MAZ_EP_slowOffroadVehiclesEnabled) exitWith {sleep 0.5;};
 				if(
 					(isOnRoad (ASLToAGL (getPosASL _vehicle))) ||
 					("Concrete" in (surfaceType (getPos _vehicle)))
@@ -115,16 +115,18 @@ private _value = (str {
 			[] spawn MAZ_fnc_offroadVehiclesLoopForServer;
 		};
 	};
-	if(!isNil "MAZ_EP_fnc_addDiaryRecord") then {
+	[] spawn {
+		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_addDiaryRecord"};
 		["Slow Offroad Vehicles", "Vehicles will drive slower offroad and will have camera shake when doing so at high speeds."] call MAZ_EP_fnc_addDiaryRecord;
 	};
-	if(!isNil "MAZ_EP_fnc_createNotification") then {
+	[] spawn {
+		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_createNotification"};
 		[
 			"Slow Offroad Vehicles System has been loaded! Vehicles are way slower, they weren't meant for this abuse!",
 			"System Initialization Notification"
 		] spawn MAZ_EP_fnc_createNotification;
 	};
-	call MAZ_slowOffroadVehicleCarrier;
+	[] spawn MAZ_slowOffroadVehicleCarrier;
 }) splitString "";
 
 _value deleteAt (count _value - 1);

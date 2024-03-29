@@ -26,11 +26,12 @@ if(missionNamespace getVariable ["MAZ_EP_dragPlayersEnabled",false]) exitWith {p
 private _varName = "MAZ_System_EnhancementPack_DP";
 private _myJIPCode = "MAZ_EPSystem_DP_JIP";
 
-MAZ_EP_dragPlayersEnabled = true;
-publicVariable "MAZ_EP_dragPlayersEnabled";
+["Drag Players","Whether to allow the dragging system.","MAZ_EP_dragPlayersEnabled",true,"TOGGLE",[],"MAZ_DP"] call MAZ_EP_fnc_addNewSetting;
 
 private _value = (str {
 	MAZ_EP_fnc_dragPlayersCarrier = {
+		private _settings = ["MAZ_DP"] call MAZ_EP_fnc_getSettingsFromSettingsGroup;
+		waitUntil {uiSleep 0.1; [_settings] call MAZ_EP_fnc_isSettingsGroupInitiliazed;};
 		MAZ_fnc_dragPlayerActions = {
 			params ["_unit"];
 			private _dragAction = _unit getVariable ["MAZ_DragAction",-1];
@@ -180,8 +181,8 @@ private _value = (str {
 			_dragger setVariable ["MAZ_draggingObject",_body,true];
 
 			[_body] spawn {
-				[player,"AmovPercMstpSnonWnonDnon_AcinPknlMwlkSnonWnonDb_1"] remoteExec ["playMove",0];
-				[(_this select 0),"AinjPpneMrunSnonWnonDb"] remoteExec ["switchMove",0];
+				[player,"AmovPercMstpSlowWrflDnon_AcinPknlMwlkSlowWrflDb_1"] remoteExec ["playMove"];
+				[(_this select 0),"AinjPpneMrunSnonWnonDb"] remoteExec ["switchMove"];
 			};
 			[_body,_dragger] spawn MAZ_fnc_waitUntilNotDraggingOrDead;
 		};
@@ -192,10 +193,10 @@ private _value = (str {
 			_body setVariable ["MAZ_isDragged",false,true];
 			_dragger setVariable ["MAZ_isDragging",false,true];
 			_dragger setVariable ["MAZ_draggingObject",objNull,true];
-			[_body,"UnconsciousFaceUp"] remoteExec ["switchMove",0];
+			[_body,"UnconsciousFaceUp"] remoteExec ["switchMove"];
 			switch(_mode) do {
-				case 0 : {[_dragger,"UnconsciousFaceUp"] remoteExec ["switchMove",0];};
-				case 1 : {[_dragger,"AcinPknlMstpSnonWnonDnon_AmovPknlMstpSnonWnonDnon"] remoteExec ["playMove",0];};
+				case 0 : {[_dragger,"UnconsciousFaceUp"] remoteExec ["switchMove"];};
+				case 1 : {[_dragger,"AcinPknlMstpSrasWrflDnon_AmovPknlMstpSrasWrflDnon"] remoteExec ["playMove"];};
 				case 2 : {};
 			};
 		};
@@ -310,37 +311,44 @@ private _value = (str {
 			};
 		};
 
-		if(!isNil "MAZ_EH_RespawnDrag") then {
-			player removeEventHandler ["Respawn",MAZ_EH_RespawnDrag];
-		};
-		MAZ_EH_RespawnDrag = player addEventhandler ["Respawn",{
-			params ["_unit", "_corpse"];
-			_unit setVariable ["MAZ_isDragged",false,true];
-			_unit setVariable ["MAZ_isDragging",false,true];
-			_unit setVariable ["MAZ_draggingObject",objNull,true];
-			[[_unit],{
+		[] spawn {
+			waitUntil {uisleep 0.1;!isNull (findDisplay 46) && alive player};
+			sleep 0.1;
+
+			if(!isNil "MAZ_EH_RespawnDrag") then {
+				player removeEventHandler ["Respawn",MAZ_EH_RespawnDrag];
+			};
+			MAZ_EH_RespawnDrag = player addEventhandler ["Respawn",{
+				params ["_unit", "_corpse"];
+				_unit setVariable ["MAZ_isDragged",false,true];
+				_unit setVariable ["MAZ_isDragging",false,true];
+				_unit setVariable ["MAZ_draggingObject",objNull,true];
+				[[_unit],{
+					params ["_unit"];
+					waitUntil {!isNil "MAZ_fnc_dragPlayerActions"};
+					[_unit] call MAZ_fnc_dragPlayerActions;
+				}] remoteExec ['spawn',0,_unit];
+			}];
+
+			[[player],{
 				params ["_unit"];
 				waitUntil {!isNil "MAZ_fnc_dragPlayerActions"};
 				[_unit] call MAZ_fnc_dragPlayerActions;
-			}] remoteExec ['spawn',0,_unit];
-		}];
-
-		[[player],{
-			params ["_unit"];
-			waitUntil {!isNil "MAZ_fnc_dragPlayerActions"};
-			[_unit] call MAZ_fnc_dragPlayerActions;
-		}] remoteExec ['spawn',0,player];
+			}] remoteExec ['spawn',0,player];
+		};
 	};
-	if(!isNil "MAZ_EP_fnc_addDiaryRecord") then {
+	[] spawn {
+		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_addDiaryRecord"};
 		["Player Dragging", "You can drag injured friendlies and load them into vehicles. Allowing you to move them to safety before reviving them."] call MAZ_EP_fnc_addDiaryRecord;
 	};
-	if(!isNil "MAZ_EP_fnc_createNotification") then {
+	[] spawn {
+		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_createNotification"};
 		[
 			"Drag Players System has been loaded! You can now drag your injured friends to safety!",
 			"System Initialization Notification"
 		] spawn MAZ_EP_fnc_createNotification;
 	};
-	call MAZ_EP_fnc_dragPlayersCarrier;
+	[] spawn MAZ_EP_fnc_dragPlayersCarrier;
 }) splitString "";
 
 _value deleteAt (count _value - 1);

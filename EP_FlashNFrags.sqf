@@ -26,11 +26,13 @@ if(missionNamespace getVariable ["MAZ_EP_flashNFragsEnabled",false]) exitWith {p
 private _varName = "MAZ_System_EnhancementPack_FNF";
 private _myJIPCode = "MAZ_EPSystem_FNF_JIP";
 
-MAZ_EP_flashNFragsEnabled = true;
-publicVariable "MAZ_EP_flashNFragsEnabled";
+["Flash n' Frags","Whether to enable the Flash n' Frags system.","MAZ_EP_flashNFragsEnabled",true,"TOGGLE",[],"MAZ_FF"] call MAZ_EP_fnc_addNewSetting;
+["RGN Flashbangs","Whether to have RGNs be replaced with flashbangs.","MAZ_EP_flashbangsEnabled",true,"TOGGLE",[],"MAZ_FF"] call MAZ_EP_fnc_addNewSetting;
 
 private _value = (str {
 	MAZ_flashBangCarrier = {
+		private _settings = ["MAZ_FF"] call MAZ_EP_fnc_getSettingsFromSettingsGroup;
+		waitUntil {uiSleep 0.1; [_settings] call MAZ_EP_fnc_isSettingsGroupInitiliazed;};
 		MAZ_flashbangExplode = {
 			params ["_fbang"];
 			[_fbang] spawn MAZ_flashBangCheckForExist;
@@ -59,7 +61,9 @@ private _value = (str {
 				comment "TODO : Make unit exit animation when killed (Killed)";
 				if(((_vis1>0.03 || _vis2>0.03) && (_unit distance _bangPosATL) < 50) || (_unit distance _bangPosATL) < 1.5) then {
 					if(isPlayer _unit) then {
-						[_unit] spawn MAZ_flashbangFlashed;
+						[[], {
+							[] spawn MAZ_flashEffect;
+						}] remoteExec ["spawn",_unit];
 					} else {
 						[[_unit], {
 							params ["_unit"];
@@ -67,11 +71,11 @@ private _value = (str {
 							[_unit] call MAZ_FF_fnc_addUnitEventhandlers;
 							_unit setVariable ["MAZ_flash_canExit",true,true];
 							sleep 4+random 3;
+							[_unit] call MAZ_FF_fnc_removeUnitEventhandlers;
 							if(_unit getVariable ["MAZ_flash_canExit",true]) then {
 								[_unit,"amovpknlmstpsraswrfldnon"] remoteExec ["switchMove"];
-								[_unit] call MAZ_FF_fnc_removeUnitEventhandlers;
 							};
-						}] remoteExec ["spawn",_unit];
+						}] remoteExec ["spawn",owner _unit];
 					};
 				};
 			}forEach _nearestUnits;
@@ -83,15 +87,6 @@ private _value = (str {
 			params ["_fbang"];
 			sleep 4.8;
 			if(!isNull _fbang) then {deleteVehicle _fbang};
-		};
-
-		MAZ_flashbangFlashed = {
-			params ["_unit"];
-			if(isPlayer _unit)then{
-				[[], {
-					[] spawn MAZ_flashEffect;
-				}] remoteExec ["spawn",_unit];
-			};
 		};
 
 		MAZ_flashEffect = {
@@ -119,9 +114,9 @@ private _value = (str {
 			PP_wetD ppEffectEnable true;
 			PP_wetD ppEffectAdjust [0,0,0,1,1,1,1,0.05,0.01,0.05,0.01,0.1,0.1,0.2,0.2];
 			PP_wetD ppEffectCommit 15;
+			[player] call MAZ_FF_fnc_removeUnitEventhandlers;
 			if(player getVariable ["MAZ_flash_canExit",true]) then {
 				[player,"amovpknlmstpsraswrfldnon"] remoteExec ["switchMove"];
-				[player] call MAZ_FF_fnc_removeUnitEventhandlers;
 			};
 		};
 
@@ -143,15 +138,12 @@ private _value = (str {
 			_collider setPosASL _pos;
 			_collider setVelocity _force;
 
-			private _pfhName = "bin_ragdoll" + name _unit;
-			[_pfhName, "onEachFrame",{
-				params["_tick","_unit","_collider","_damageState","_pfhName"];
-				if(time > _tick)then{
-					deleteVehicle _collider;
-					if(_damageState)then{_unit allowDamage true};
-					[_pfhName, "onEachFrame"] call BIS_fnc_removeStackedEventHandler;
-				};
-			}, [time+0.1,_unit,_collider,_damageState,_pfhName]] call BIS_fnc_addStackedEventHandler;
+			[_collider,_damageState,_unit] spawn {
+				params ["_collider","_damageState","_unit"];
+				sleep 0.1;
+				deleteVehicle _collider;
+				if(_damageState)then{_unit allowDamage true};
+			};
 		};
 
 		MAZ_FF_fnc_addUnitEventhandlers = {
@@ -180,8 +172,8 @@ private _value = (str {
 					[_unit] call MAZ_FF_fnc_removeUnitEventhandlers;
 				};
 			}];
-			_unit setVariable ["MAZ_flash_kill",_ehKilled,true];
-			_unit setVariable ["MAZ_flash_hit",_ehHit,true];
+			_unit setVariable ["MAZ_flash_kill",_ehKilled];
+			_unit setVariable ["MAZ_flash_hit",_ehHit];
 		};
 
 		MAZ_FF_fnc_removeUnitEventhandlers = {
@@ -190,21 +182,25 @@ private _value = (str {
 			private _ehHit = _unit getVariable ["MAZ_flash_hit",-420];
 			if(_ehKilled != -420) then {
 				_unit removeEventhandler ["Killed",_ehKilled];
+				_unit setVariable ["MAZ_flash_kill",nil];
 			};
 			if(_ehHit != -420) then {
 				_unit removeEventHandler ["Dammaged",_ehHit];
+				_unit setVariable ["MAZ_flash_hit",nil];
 			};
-			_unit setVariable ["MAZ_flash_kill",nil,true];
-			_unit setVariable ["MAZ_flash_hit",nil,true];
 		};
 
-		if(!isNil "MAZ_EH_FiredMan_FlashAndFrag") then {
-			player removeEventHandler ["FiredMan",MAZ_EH_FiredMan_FlashAndFrag];
-		};
-		MAZ_EH_FiredMan_FlashAndFrag = player addEventHandler ["FiredMan",{
-			params ["_unit", "_weapon", "_muzzle", "_mode", "_ammo", "_magazine", "_projectile", "_vehicle"];
-			if(MAZ_EP_flashNFragsEnabled) then {
-				if(_magazine == "MiniGrenade") then {
+		[] spawn {
+			waitUntil {uisleep 0.1;!isNull (findDisplay 46) && alive player};
+			sleep 0.1;
+
+			if(!isNil "MAZ_EH_FiredMan_FlashAndFrag") then {
+				player removeEventHandler ["FiredMan",MAZ_EH_FiredMan_FlashAndFrag];
+			};
+			MAZ_EH_FiredMan_FlashAndFrag = player addEventHandler ["FiredMan",{
+				params ["_unit", "_weapon", "_muzzle", "_mode", "_ammo", "_magazine", "_projectile", "_vehicle"];
+				if(!MAZ_EP_flashNFragsEnabled) exitWith {};
+				if(_magazine == "MiniGrenade" && MAZ_EP_flashbangsEnabled) then {
 					[_projectile] spawn MAZ_flashbangExplode;
 				};
 				if(_magazine == "HandGrenade") then {
@@ -232,19 +228,21 @@ private _value = (str {
 						};
 					};
 				};
-			};
-		}];
+			}];
+		};
 	};
-	if(!isNil "MAZ_EP_fnc_addDiaryRecord") then {
+	[] spawn {
+		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_addDiaryRecord"};
 		["Flash n' Frags", "Replaces the otherwise useless RGN grenades with flashbangs that will stun players and AI who are looking at the flash or within a certain distance. Adds physical fragmentation to RGO grenades, making them more lethal and scarier."] call MAZ_EP_fnc_addDiaryRecord;
 	};
-	if(!isNil "MAZ_EP_fnc_createNotification") then {
+	[] spawn {
+		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_createNotification"};
 		[
 			"Flash n' Frags System has been loaded! Watch out for extra fragmentation from grenades and flashbangs!",
 			"System Initialization Notification"
 		] spawn MAZ_EP_fnc_createNotification;
 	};
-	call MAZ_flashBangCarrier;
+	[] spawn MAZ_flashBangCarrier;
 }) splitString "";
 
 _value deleteAt (count _value - 1);

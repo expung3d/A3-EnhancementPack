@@ -26,8 +26,7 @@ if(missionNamespace getVariable ["MAZ_EP_boatAnchors",false]) exitWith {playSoun
 private _varName = "MAZ_System_EnhancementPack_BA";
 private _myJIPCode = "MAZ_EPSystem_BA_JIP";
 
-MAZ_EP_boatAnchors = true;
-publicVariable "MAZ_EP_boatAnchors";
+["Boat Anchors","Whether to enable the Boat Anchors system.","MAZ_EP_boatAnchors",true,"TOGGLE",[],"MAZ_BA"] call MAZ_EP_fnc_addNewSetting;
 
 private _value = (str {
 	MAZ_anchorPoints = [
@@ -39,8 +38,10 @@ private _value = (str {
 	publicVariable "MAZ_anchorPoints";
 
 	MAZ_EP_fnc_boatAnchorsCarrier = {
+		private _settings = ["MAZ_BA"] call MAZ_EP_fnc_getSettingsFromSettingsGroup;
+		waitUntil {uiSleep 0.1; [_settings] call MAZ_EP_fnc_isSettingsGroupInitiliazed;};
 		MAZ_fnc_boatAnchorServerLoop = {
-			while{MAZ_EP_boatAnchors} do {
+			while{MAZ_EP_CoreEnabled} do {
 				call MAZ_fnc_setupBoatAnchor;
 				sleep 1;
 			};
@@ -63,6 +64,7 @@ private _value = (str {
 
 		MAZ_fnc_canDeployAnchor = {
 			params ["_boat","_caller"];
+			if(!MAZ_EP_boatAnchors) exitWith {false};
 			if(!(_caller in _boat) || (driver _boat) != _caller) exitWith {false};
 			if(!(surfaceIsWater (getPos _boat))) exitWith {false};
 			private _isAnchorDeployed = _boat getVariable ["MAZ_anchorDeployed",false];
@@ -74,6 +76,7 @@ private _value = (str {
 
 		MAZ_fnc_canRetractAnchor = {
 			params ["_boat","_caller"];
+			if(!MAZ_EP_boatAnchors) exitWith {false};
 			if(!(_caller in _boat) || (driver _boat) != _caller) exitWith {false};
 			private _isAnchorDeployed = _boat getVariable ["MAZ_anchorDeployed",false];
 			private _isAnchorBroken = _boat getVariable ["MAZ_anchorBroken",false];
@@ -190,16 +193,18 @@ private _value = (str {
 			[] spawn MAZ_fnc_boatAnchorServerLoop;
 		};
 	};
-	if(!isNil "MAZ_EP_fnc_addDiaryRecord") then {
+	[] spawn {
+		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_addDiaryRecord"};
 		["Boat Anchors","Boats will have the ability to deploy anchors which will prevent the vehicle from moving from its position and from drifting away when stopped."] call MAZ_EP_fnc_addDiaryRecord;
 	};
-	if(!isNil "MAZ_EP_fnc_createNotification") then {
+	[] spawn {
+		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_createNotification"};
 		[
 			"Boat Anchors System has been loaded! All boats now have anchors to prevent them from drifting!",
 			"System Initialization Notification"
 		] spawn MAZ_EP_fnc_createNotification;
 	};
-	call MAZ_EP_fnc_boatAnchorsCarrier;
+	[] spawn MAZ_EP_fnc_boatAnchorsCarrier;
 }) splitString "";
 
 _value deleteAt (count _value - 1);

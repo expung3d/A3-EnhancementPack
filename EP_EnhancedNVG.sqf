@@ -26,14 +26,13 @@ if(missionNamespace getVariable ["MAZ_EP_enhancedNightVisionEnabled",false]) exi
 private _varName = "MAZ_System_EnhancementPack_ENV";
 private _myJIPCode = "MAZ_EPSystem_ENV_JIP";
 
-MAZ_EP_enhancedNightVisionEnabled = true;
-publicVariable "MAZ_EP_enhancedNightVisionEnabled";
-
-MAZ_ENV_allowThirdPersonVehicles = true;
-publicVariable "MAZ_ENV_allowThirdPersonVehicles";
+["[ENV] Enhanced Night Vision","Whether to enable the Enhanced Night Vision system.","MAZ_EP_enhancedNightVisionEnabled",true,"TOGGLE",[],"MAZ_ENV"] call MAZ_EP_fnc_addNewSetting;
+["[ENV] 3PP in Vehicles","Whether to allow players to use 3rd person in vehicles with night vision.","MAZ_ENV_allowThirdPersonVehicles",true,"TOGGLE",[],"MAZ_ENV"] call MAZ_EP_fnc_addNewSetting;
 
 private _value = (str {
 	MAZ_EP_fnc_enhancedNightVisionCarrier = {
+		private _settings = ["MAZ_ENV"] call MAZ_EP_fnc_getSettingsFromSettingsGroup;
+		waitUntil {uiSleep 0.1; [_settings] call MAZ_EP_fnc_isSettingsGroupInitiliazed;};
 		MAZ_ENV_whitelistedNVGOptics = [
 			"optic_Aco",
 			"optic_ACO_grn",
@@ -117,6 +116,52 @@ private _value = (str {
 			"H_HelmetB_TI_tna_F",
 			"H_HelmetB_TI_arid_F"
 		];
+
+		MAZ_ENV_fnc_isNightTime = {
+			([date] call BIS_fnc_sunriseSunsetTime) params ["_sunrise","_sunset"];
+			dayTime > _sunset || dayTime < _sunrise
+		};
+
+		MAZ_ENV_fnc_adjustAIAtNightServerLoop = {
+			while {MAZ_EP_enhancedNightVisionEnabled} do {
+				waitUntil {uiSleep 1; call MAZ_ENV_fnc_isNightTime;};
+				call MAZ_ENV_fnc_makeAIDumbAtNight;
+				waitUntil {uiSleep 1; !(call MAZ_ENV_fnc_isNightTime);};
+				call MAZ_ENV_fnc_makeAISmartAtDay;
+			};
+		};
+
+		MAZ_ENV_fnc_makeAIDumbAtNight = {
+			{
+				private _unit = _x;
+				{
+					private _skillValue = _unit skill _x;
+					_unit setSkill [_x,_skillValue / 2];
+				}forEach ["aimingAccuracy","aimingShake","aimingSpeed","spotDistance","spotTime","courage","reloadSpeed","commanding"];
+				_unit setVariable ["MAZ_ENV_dumbAtNight",true];
+			}forEach (allUnits - allPlayers);
+		};
+
+		MAZ_ENV_fnc_makeAISmartAtDay = {
+			{
+				if !(_x getVariable ["MAZ_ENV_dumbAtNight",false]) then {continue};
+				private _unit = _x;
+				{
+					private _skillValue = _unit skill _x;
+					_unit setSkill [_x,_skillValue * 2];
+				}forEach ["aimingAccuracy","aimingShake","aimingSpeed","spotDistance","spotTime","courage","reloadSpeed","commanding"];
+				_unit setVariable ["MAZ_ENV_dumbAtNight",false];
+			}forEach (allUnits - allPlayers);
+		};
+
+		MAZ_ENV_fnc_canEnter3PP = {
+			if(!MAZ_EP_enhancedNightVisionEnabled) exitWith {true};
+			if((currentVisionMode player) == 0) exitWith {true};
+			private _veh = vehicle player;
+			if(_veh == player) exitWith {false};
+			if(MAZ_ENV_allowThirdPersonVehicles) exitWith {true};
+			false;
+		};
 
 		MAZ_ENV_fnc_createIRIlluminator = {
 			params [["_diffuse",false,[false]]];
@@ -275,24 +320,8 @@ private _value = (str {
 		MAZ_DEH_KeyDown_ENV_pointShoot = (findDisplay 46) displayAddEventHandler ["KeyDown", "_this call MAZ_pointShootOnKeyDown;"]; 
 		MAZ_DEH_KeyUp_ENV_pointShoot = (findDisplay 46) displayAddEventHandler ["KeyUp", "_this call MAZ_pointShootOnKeyUp;"]; 
 
-		addMissionEventHandler ["Draw3D", {
+		MAZ_ENV_MEH_Draw3D_WeaponOptics = addMissionEventHandler ["Draw3D", {
 			call {
-				comment "
-					IF player tries to enter third person outside of a vehicle THEN switch internal
-					IF player tries to enter third person in vehicle without setting THEN switch internal
-				";
-				if (
-					(currentVisionMode player) != 0 && 
-					(cameraView == "External") && 
-					currentWeapon player != "" &&
-					(
-						vehicle player == player || 
-						((vehicle player != player) && !MAZ_ENV_allowThirdPersonVehicles)
-					)
-				) exitWith {
-					player switchCamera "INTERNAL";
-				};
-
 				comment "
 					IF optic not whitelisted but greylisted check optic mode THEN switch optic mode
 					IF player tries to aim with improper sight on dual optic THEN switch optic mode
@@ -325,8 +354,9 @@ private _value = (str {
 			};
 		}];
 
-		addMissionEventHandler ["Draw3D", {
+		MAZ_ENV_MEH_Draw3D_WhitePhosphor = addMissionEventHandler ["Draw3D", {
 			call {
+				if(!MAZ_EP_enhancedNightVisionEnabled) exitWith {MAZ_PP_ColorCorrect_NVG ppEffectEnable false;};
 				if(currentVisionMode player == 0) then {
 					if(!isNil "MAZ_PP_FilmGrain_NVG") then {	
 						MAZ_PP_FilmGrain_NVG ppEffectEnable false;
@@ -336,23 +366,26 @@ private _value = (str {
 					if(isNil "MAZ_PP_FilmGrain_NVG") then {
 						MAZ_PP_FilmGrain_NVG = ppEffectCreate ["FilmGrain",2000];
 					};
+					private _grainIntensity = 0.42 + (0.32 * (1 - overcast));
+					private _sharpness = 0.71 + (0.22 * (1 - overcast));
 					MAZ_PP_FilmGrain_NVG ppEffectEnable true;
 					MAZ_PP_FilmGrain_NVG ppEffectForceInNVG true;
-					MAZ_PP_FilmGrain_NVG ppEffectAdjust [0.42,0.71,0.2,0.57,0.24,true];
+					MAZ_PP_FilmGrain_NVG ppEffectAdjust [_grainIntensity,_sharpness,1,0.64,0.24,true];
 					MAZ_PP_FilmGrain_NVG ppEffectCommit 0;
 				};
 				if(currentVisionMode player == 1 && ((assignedItems player) findIf {_x in ["NVGogglesB_blk_F","NVGogglesB_grn_F","NVGogglesB_gry_F"]}) != -1) then {
 					if(isNil "MAZ_PP_ColorCorrect_NVG") then {
 						MAZ_PP_ColorCorrect_NVG = ppEffectCreate ["ColorCorrections",1500];
 					};
+					private _contrast = 0.3 + (0.4 * (1 - overcast));
 					MAZ_PP_ColorCorrect_NVG ppEffectForceInNVG true;
 					MAZ_PP_ColorCorrect_NVG ppEffectEnable true;
 					MAZ_PP_ColorCorrect_NVG ppEffectAdjust [
-						1.1, 
-						0.7, 
+						1.05, 
+						_contrast, 
 						0, 
 						[0,0.05,0.05,0], 
-						[0.25,0.75,0.8,0], 
+						[0.25,0.75,0.85,0], 
 						[1,1,1,0],
 						[0,0,0,0,0,0,0]
 					];
@@ -363,13 +396,41 @@ private _value = (str {
 			};
 		}];
 
+		if(!isNil "MAZ_EH_VisionModeChanged_ENV") then {
+			player removeEventHandler ["VisionModeChanged",MAZ_EH_VisionModeChanged_ENV];
+		};
 		MAZ_EH_VisionModeChanged_ENV = player addEventHandler ["VisionModeChanged", {
 			params ["_person", "_visionMode", "_TIindex", "_visionModePrev", "_TIindexPrev", "_vehicle", "_turret"];
+			if(!MAZ_EP_enhancedNightVisionEnabled) exitWith {};
 			if(_visionModePrev == 0) then {
 				playSound3D ['A3\ui_f_curator\data\sound\CfgSound\visionMode.wss', _person,false,getPosASL _person,5,1,5];
+				if !(call MAZ_ENV_fnc_canEnter3PP) then {
+					if(cameraView == "External") then {
+						player switchCamera "Internal";
+					};
+				};
 			};
 			if(_visionMode > 1) then {
 				player action ["nvGogglesOff", player];
+			};
+		}];
+		if(!isNil "MAZ_ENV_DEH_KeyDown_firstPerson") then {
+			(findDisplay 46) displayRemoveEventHandler ["KeyDown",MAZ_ENV_DEH_KeyDown_firstPerson];
+		};
+		MAZ_ENV_DEH_KeyDown_firstPerson = (findDisplay 46) displayAddEventHandler ["KeyDown", {
+			params ["_display","_key"];
+			private _return = false;
+			if(_key in (actionKeys "personView") && !(call MAZ_ENV_fnc_canEnter3PP)) then {
+				_return = true;
+			};
+			_return
+		}];
+		if(!isNil "MAZ_ENV_EH_GetOutMan_3PP") then {
+			player removeEventHandler ["GetOutMan",MAZ_ENV_EH_GetOutMan_3PP];
+		};
+		MAZ_ENV_EH_GetOutMan_3PP = player addEventHandler ["GetOutMan", {
+			if(cameraView == "External" && !(call MAZ_ENV_fnc_canEnter3PP)) then {
+				player switchCamera "Internal";
 			};
 		}];
 
@@ -377,21 +438,27 @@ private _value = (str {
 			waitUntil {uisleep 0.1;!isNull (findDisplay 46) && alive player};
 			sleep 0.1;
 			waitUntil {!isNil "MAZ_fnc_newKeybind"};
-			MAZ_Key_ENV_ToggleIRIlluminator = ["Toggle IR Illuminator","Turn on or off the IR Illuminator.",38,{call MAZ_ENV_fnc_toggleIRIlluminator;},false,true] call MAZ_fnc_newKeybind;
-			MAZ_Key_ENV_ToggleIRIlluminatorDiffuseMode = ["Toggle IR Diffuser","Turn on or off the IR diffuser.",38,{call MAZ_ENV_fnc_toggleIRIlluminatorDiffuseMode;},false,false,true] call MAZ_fnc_newKeybind;
+			MAZ_Key_ENV_ToggleIRIlluminator = ["Toggle IR Illuminator","Turn on or off the IR Illuminator.",38,{call MAZ_ENV_fnc_toggleIRIlluminator;},false,true,false,false,false,"MAZ_IRIllum"] call MAZ_fnc_newKeybind;
+			MAZ_Key_ENV_ToggleIRIlluminatorDiffuseMode = ["Toggle IR Diffuser","Turn on or off the IR diffuser.",38,{call MAZ_ENV_fnc_toggleIRIlluminatorDiffuseMode;},false,false,true,false,false,"MAZ_IRIllumMode"] call MAZ_fnc_newKeybind;
 			comment 'MAZ_Key_ENV_AttachLight = ["Attach Light","Attach current selected IR or chem Light to helmet.",35,{[] spawn MAZ_ENV_fnc_attachStrobeLightToHelmet;},false,false,true] call MAZ_fnc_newKeybind'; 
 		};
+
+		if(isServer) then {
+			[] spawn MAZ_ENV_fnc_adjustAIAtNightServerLoop;
+		};
 	};
-	if(!isNil "MAZ_EP_fnc_addDiaryRecord") then {
+	[] spawn {
+		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_addDiaryRecord"};
 		["Enhanced Nightvision", "This makes NVGs more realistic by adding extra film grain when using them and preventing the use of magnified optics. With NVGs you will still be able to use 1x optics, however, zoomed optics aren't available. In addition, you will be forced into first person when using NVGs. Also, ENVGs have white phosphor tubes... because its cool."] call MAZ_EP_fnc_addDiaryRecord;
 	};
-	if(!isNil "MAZ_EP_fnc_createNotification") then {
+	[] spawn {
+		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_createNotification"};
 		[
 			"Enhanced Night Vision System has been loaded! Night Vision has more grain and you have IR illuminators now!",
 			"System Initialization Notification"
 		] spawn MAZ_EP_fnc_createNotification;
 	};
-	call MAZ_EP_fnc_enhancedNightVisionCarrier;
+	[] spawn MAZ_EP_fnc_enhancedNightVisionCarrier;
 }) splitString "";
 
 _value deleteAt (count _value - 1);

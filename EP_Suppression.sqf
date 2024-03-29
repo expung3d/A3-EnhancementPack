@@ -26,11 +26,12 @@ if(missionNamespace getVariable ["MAZ_EP_suppressionEnabled",false]) exitWith {p
 private _varName = "MAZ_System_EnhancementPack_SUP";
 private _myJIPCode = "MAZ_EPSystem_SUP_JIP";
 
-MAZ_EP_suppressionEnabled = true;
-publicVariable "MAZ_EP_suppressionEnabled";
+["Suppression","Whether to enable the Suppression system.","MAZ_EP_suppressionEnabled",true,"TOGGLE",[],"MAZ_SUP"] call MAZ_EP_fnc_addNewSetting;
 
 private _value = (str {
 	MAZ_EP_fnc_suppressionCarrier = {
+		private _settings = ["MAZ_SUP"] call MAZ_EP_fnc_getSettingsFromSettingsGroup;
+		waitUntil {uiSleep 0.1; [_settings] call MAZ_EP_fnc_isSettingsGroupInitiliazed;};
 		if(!isNil "MAZ_EH_suppression") then {
 			player removeEventHandler ["Suppressed",MAZ_EH_suppression];
 		};
@@ -55,16 +56,18 @@ private _value = (str {
 			};
 		}];
 	};
-	if(!isNil "MAZ_EP_fnc_addDiaryRecord") then {
+	[] spawn {
+		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_addDiaryRecord"};
 		["Suppression Effects", "When you are suppressed by enemies you will have a tunnel vision effect similar to that seen in Squad."] call MAZ_EP_fnc_addDiaryRecord;
 	};
-	if(!isNil "MAZ_EP_fnc_createNotification") then {
+	[] spawn {
+		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_createNotification"};
 		[
 			"Suppression System has been loaded! Bullets are way scarier now!",
 			"System Initialization Notification"
 		] spawn MAZ_EP_fnc_createNotification;
 	};
-	call MAZ_EP_fnc_suppressionCarrier;
+	[] spawn MAZ_EP_fnc_suppressionCarrier;
 }) splitString "";
 
 _value deleteAt (count _value - 1);

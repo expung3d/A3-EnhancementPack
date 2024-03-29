@@ -26,20 +26,29 @@ if(missionNamespace getVariable ["MAZ_EP_CC_combatCalloutsEnabled",false]) exitW
 private _varName = "MAZ_System_EnhancementPack_CC";
 private _myJIPCode = "MAZ_EPSystem_CC_JIP";
 
-MAZ_EP_CC_combatCalloutsEnabled = true;
-publicVariable "MAZ_EP_CC_combatCalloutsEnabled";
+["[CC] Combat Callouts","Whether to enable the Combat Callouts system.","MAZ_EP_CC_combatCalloutsEnabled",true,"TOGGLE",[],"MAZ_CC"] call MAZ_EP_fnc_addNewSetting;
+["[CC] Call for Medic","Whether to enable calling for a medic when injured.","MAZ_EP_CC_callMedicToggle",true,"TOGGLE",[],"MAZ_CC"] call MAZ_EP_fnc_addNewSetting;
+["[CC] Call Reload","Whether to enable calling out when you're reloading.","MAZ_EP_CC_callReloadToggle",true,"TOGGLE",[],"MAZ_CC"] call MAZ_EP_fnc_addNewSetting;
+["[CC] Call Suppressed","Whether to enable calling out when you're being suppressed.","MAZ_EP_CC_callSuppressedToggle",true,"TOGGLE",[],"MAZ_CC"] call MAZ_EP_fnc_addNewSetting;
+["[CC] Call Friendly Fire","Whether to enable calling out when you're being shot by friendlies.","MAZ_EP_CC_callFFToggle",true,"TOGGLE",[],"MAZ_CC"] call MAZ_EP_fnc_addNewSetting;
+["[CC] Call Dead Squadmate","Whether to enable calling out when one of your group members dies.","MAZ_EP_CC_callDeadFriendlyToggle",true,"TOGGLE",[],"MAZ_CC"] call MAZ_EP_fnc_addNewSetting;
+["[CC] Call Hit","Whether to enable calling out when you get hurt.","MAZ_EP_CC_callHurtToggle",true,"TOGGLE",[],"MAZ_CC"] call MAZ_EP_fnc_addNewSetting;
+["[CC] Call Kill","Whether to enable calling out when you kill an enemy.","MAZ_EP_CC_callKillToggle",true,"TOGGLE",[],"MAZ_CC"] call MAZ_EP_fnc_addNewSetting;
+["[CC] Call Direction","Whether to enable calling out the direction when you ping a location.","MAZ_EP_CC_callDirectionToggle",true,"TOGGLE",[],"MAZ_CC"] call MAZ_EP_fnc_addNewSetting;
+["[CC] Call Grenade","Whether to enable calling out when a grenade is nearby.","MAZ_EP_CC_callNadeToggle",true,"TOGGLE",[],"MAZ_CC"] call MAZ_EP_fnc_addNewSetting;
+["[CC] Call Throwing Grenade","Whether to enable calling out when you throw a grenade.","MAZ_EP_CC_callNadeThrowToggle",true,"TOGGLE",[],"MAZ_CC"] call MAZ_EP_fnc_addNewSetting;
 
 private _value = (str {
 	MAZ_EP_CC_delayToCallMedic = 15;
-	publicVariable 'MAZ_EP_CC_delayToCallMedic';
 	MAZ_EP_CC_MAZ_EP_CC_delayToCallSuppressedTimer = 45;
-	publicVariable 'MAZ_EP_CC_MAZ_EP_CC_delayToCallSuppressedTimer';
 	MAZ_EP_CC_delayToCallReload = 5;
-	publicVariable 'MAZ_EP_CC_delayToCallReload';
 	
-	MAZ_fnc_combatCalloutsCarrier = {
+	MAZ_CC_fnc_combatCalloutsCarrier = {
+		private _settings = ["MAZ_CC"] call MAZ_EP_fnc_getSettingsFromSettingsGroup;
+		waitUntil {uiSleep 0.1; [_settings] call MAZ_EP_fnc_isSettingsGroupInitiliazed;};
 		MAZ_autoCallMedic = {
-			while{MAZ_EP_CC_combatCalloutsEnabled} do {
+			while{MAZ_EP_CoreEnabled} do {
+				if(!MAZ_EP_CC_combatCalloutsEnabled || !MAZ_EP_CC_callMedicToggle) exitWith {sleep MAZ_EP_CC_delayToCallMedic;};
 				private _lState = lifeState player;
 				if(_lState isEqualTo "INCAPACITATED") then {
 					private _medicLines = [
@@ -226,7 +235,11 @@ private _value = (str {
 		MAZ_callOutGotHit = {
 			params ["_unit","_source"];
 			if(!(_source isKindOf "Man")) exitWith {};
-			if(side group _source == side group _unit && _source != _unit) exitWith {[_unit,_source] spawn MAZ_callFriendlyFireMessage; [] spawn MAZ_callFriendlyFire;};
+			if(side group _source == side group _unit && _source != _unit) exitWith {
+				if(MAZ_EP_CC_callFFToggle) then {
+					[_unit,_source] spawn MAZ_callFriendlyFireMessage; [] spawn MAZ_callFriendlyFire;
+				};
+			};
 			if(!MAZ_EP_CC_delayToCallHit) then {
 				[_unit] spawn MAZ_makeLipSync;
 
@@ -686,7 +699,8 @@ private _value = (str {
 		};
 
 		MAZ_fnc_detectNadeLoop = {
-			while {MAZ_EP_CC_combatCalloutsEnabled} do {
+			while {MAZ_EP_CoreEnabled} do {
+				if(!MAZ_EP_CC_combatCalloutsEnabled || !MAZ_EP_CC_callNadeToggle) exitWith {sleep 1;};
 				call MAZ_fnc_detectEnemyGrenade;
 				sleep 1;
 			};
@@ -820,8 +834,12 @@ private _value = (str {
 			};
 		}]';
 
+		waitUntil {uisleep 0.1;!isNull (findDisplay 46) && alive player};
+		sleep 0.1;
+
 		MAZ_EH_FiredMan_callThrowGrenade = player addEventHandler ["FiredMan", {
 			params ["_unit", "_weapon", "_muzzle", "_mode", "_ammo", "_magazine", "_projectile", "_vehicle"];
+			if(!MAZ_EP_CC_callNadeThrowToggle) exitWith {};
 			if(_weapon == "Throw") then {
 				private _grenadesClass = [
 					"HandGrenade",
@@ -849,47 +867,49 @@ private _value = (str {
 		[] spawn MAZ_fnc_detectNadeLoop;
 		[] spawn MAZ_changeVoiceAndFace;
 
-		enableSentences false;
-
 		MAZ_EP_CC_reloadCooldown = false;
 		if(!isNil "MAZ_Key_callReload") then {
 			(findDisplay 46) displayRemoveEventHandler ["KeyDown",MAZ_Key_callReload];
 		};
 		MAZ_Key_callReload = (findDisplay 46) displayAddEventHandler ["KeyDown", {
+			if(!MAZ_EP_CC_combatCalloutsEnabled || !MAZ_EP_CC_callReloadToggle) exitWith {};
 			if ((_this select 1) in actionKeys "ReloadMagazine") then {
 				[] spawn MAZ_callOutReload;
 			};
 		}];
 		if(!isNil "MAZ_EH_Reloaded_resetTimer") then {
-			(findDisplay 46) displayRemoveEventHandler ["Reloaded",MAZ_EH_Reloaded_resetTimer];
+			player removeEventHandler ["Reloaded",MAZ_EH_Reloaded_resetTimer];
 		};
 		MAZ_EH_Reloaded_resetTimer = player addEventHandler ["Reloaded",{MAZ_EP_CC_reloadCooldown = false;}];
 		
 		MAZ_EP_CC_delayToCallKill = false;
 		MAZ_EP_CC_delayToCallSuppress = false;
 		if(!isNil "MAZ_EH_Suppressed_callSuppressed") then {
-			(findDisplay 46) displayRemoveEventHandler ["Suppressed",MAZ_EH_Suppressed_callSuppressed];
+			player removeEventHandler ["Suppressed",MAZ_EH_Suppressed_callSuppressed];
 		};
 		MAZ_EH_Suppressed_callSuppressed = player addEventHandler ["Suppressed", {
 			params ["_unit", "_distance", "_shooter", "_instigator", "_ammoObject", "_ammoClassName", "_ammoConfig"];
+			if(!MAZ_EP_CC_combatCalloutsEnabled || !MAZ_EP_CC_callSuppressedToggle) exitWith {};
 			if(!MAZ_EP_CC_delayToCallSuppress) then {
 				[_unit,_distance,_shooter] spawn MAZ_callSuppressed;
 			};
 		}];
 		if(!isNil "MAZ_EH_Killed_CallDeadFriendly") then {
-			(findDisplay 46) displayRemoveEventHandler ["Killed",MAZ_EH_Killed_CallDeadFriendly];
+			player removeEventHandler ["Killed",MAZ_EH_Killed_CallDeadFriendly];
 		};
 		MAZ_EH_Killed_CallDeadFriendly = player addEventHandler ["Killed", {
 			params ["_unit", "_killer", "_instigator", "_useEffects"];
+			if(!MAZ_EP_CC_combatCalloutsEnabled || !MAZ_EP_CC_callDeadFriendlyToggle) exitWith {};
 			[_unit] spawn MAZ_callDeadFriendly;
 		}];
 
 		MAZ_EP_CC_delayToCallHit = false;
 		if(!isNil "MAZ_EH_Hit_CallHit") then {
-			(findDisplay 46) displayRemoveEventHandler ["Hit",MAZ_EH_Hit_CallHit];
+			player removeEventHandler ["Hit",MAZ_EH_Hit_CallHit];
 		};
 		MAZ_EH_Hit_CallHit = player addEventHandler ["Hit",{
 			params ["_unit", "_source", "_damage", "_instigator"];
+			if(!MAZ_EP_CC_combatCalloutsEnabled || !MAZ_EP_CC_callHurtToggle) exitWith {};
 			[_unit,_source] spawn MAZ_callOutGotHit;
 		}];
 		MAZ_EP_CC_delayToCallDirection = false;
@@ -897,22 +917,25 @@ private _value = (str {
 			(findDisplay 46) displayRemoveEventHandler ["KeyDown",MAZ_Key_callDirection];
 		};
 		MAZ_Key_callDirection = (findDisplay 46) displayAddEventHandler ["KeyDown",{
+			if(!MAZ_EP_CC_combatCalloutsEnabled || !MAZ_EP_CC_callDirectionToggle) exitWith {};
 			if(inputAction 'TacticalPing' > 0 && !MAZ_EP_CC_delayToCallDirection) then {
 				MAZ_EP_CC_delayToCallDirection = true;
 				[] spawn MAZ_callDirection;
 			};
 		}];
 	};
-	if(!isNil "MAZ_EP_fnc_addDiaryRecord") then {
+	[] spawn {
+		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_addDiaryRecord"};
 		["Combat Callouts", "Players will make callouts like 'Reloading!' and 'I need a medic' in appropriate contexts. This can help with noticing injured friendlies by audio ques rather than seeing them."] call MAZ_EP_fnc_addDiaryRecord;
 	};
-	if(!isNil "MAZ_EP_fnc_createNotification") then {
+	[] spawn {
+		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_createNotification"};
 		[
 			"Combat Callouts System has been loaded! Your character suddenly gained a voice box!",
 			"System Initialization Notification"
 		] spawn MAZ_EP_fnc_createNotification;
 	};
-	call MAZ_fnc_combatCalloutsCarrier;
+	[] spawn MAZ_CC_fnc_combatCalloutsCarrier;
 }) splitString "";
 
 _value deleteAt (count _value - 1);
@@ -934,6 +957,7 @@ missionNamespace setVariable [_varName,_value,true];
 [[], {
 	MAZ_MEH_EntityKilled_CC = addMissionEventHandler ["EntityKilled", {
 		params ["_killed", "_killer"];
+		if(!MAZ_EP_CC_combatCalloutsEnabled || !MAZ_EP_CC_callKillToggle) exitWith {};
 		if (((side (group _killed)) != (side (group _killer))) && isPlayer _killer) then {
 			if((side (group _killed) == civilian) && _killed isKindOf "Man") exitWith {
 				[[],{

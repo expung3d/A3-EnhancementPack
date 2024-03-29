@@ -26,18 +26,16 @@ if(missionNamespace getVariable ["MAZ_EP_enhancedRadioEnabled",false]) exitWith 
 private _varName = "MAZ_System_EnhancementPack_ER";
 private _myJIPCode = "MAZ_EPSystem_ER_JIP";
 
-MAZ_EP_enhancedRadioEnabled = true;
-publicVariable 'MAZ_EP_enhancedRadioEnabled';
-
-MAZ_EP_enhancedRadioLeaderOnly = false;
-publicVariable "MAZ_EP_enhancedRadioLeaderOnly";
-
-MAZ_EP_enhancedRadioAnim = true;
-publicVariable "MAZ_EP_enhancedRadioAnim";
+["[ER] Enhanced Radio","Whether to enable the Enhanced Radio system.","MAZ_EP_enhancedRadioEnabled",true,"TOGGLE",[],"MAZ_ER"] call MAZ_EP_fnc_addNewSetting;
+["[ER] Radio Only for Squad Leader","Whether to limit GLOBAL, SIDE, and COMMAND to Squad Leaders.","MAZ_EP_enhancedRadioLeaderOnly",true,"TOGGLE",[],"MAZ_ER"] call MAZ_EP_fnc_addNewSetting;
+["[ER] Radio Animation","Whether to play an animation when using GLOBAL, SIDE, and COMMAND.","MAZ_EP_enhancedRadioAnim",true,"TOGGLE",[],"MAZ_ER"] call MAZ_EP_fnc_addNewSetting;
 
 private _value = (str {
 	MAZ_fnc_enhancedRadioCarrier = {
+		private _settings = ["MAZ_ER"] call MAZ_EP_fnc_getSettingsFromSettingsGroup;
+		waitUntil {uiSleep 0.1; [_settings] call MAZ_EP_fnc_isSettingsGroupInitiliazed;};
 		MAZ_fnc_radioIn = {
+			if(!MAZ_EP_enhancedRadioEnabled) exitWith {};
 			if("ItemRadio" in assignedItems player) then {
 				private _channel = currentChannel;
 				if(_channel < 4) then {
@@ -86,6 +84,7 @@ private _value = (str {
 		};
 
 		MAZ_fnc_radioOut = {
+			if(!MAZ_EP_enhancedRadioEnabled) exitWith {};
 			if("ItemRadio" in assignedItems player) then {
 				private _channel = currentChannel;
 				if(_channel < 4) then {
@@ -122,43 +121,36 @@ private _value = (str {
 		};
 
 		MAZ_fnc_radioRequirement = {
-			while {MAZ_EP_enhancedRadioEnabled} do {
-				if(!MAZ_EP_enhancedRadioLeaderOnly) then {
-					if ("ItemRadio" in assignedItems player) then {
+			while {MAZ_EP_CoreEnabled} do {
+				if(!MAZ_EP_enhancedRadioEnabled) exitWith {};
+				if ("ItemRadio" in assignedItems player) then {
+					0 enableChannel [true,true];
+					1 enableChannel [true,true];
+					2 enableChannel [true,true];
+					3 enableChannel [true,true];
+				} else {
+					0 enableChannel [true,false];
+					1 enableChannel [true,false]; 
+					2 enableChannel [true,false];
+					3 enableChannel [true,false];
+				};
+				
+				if(MAZ_EP_enhancedRadioLeaderOnly) then {
+					private _grpPlyr = group player;
+					private _ldrGrp = leader _grpPlyr;
+
+					if(_ldrGrp == player) then {
 						0 enableChannel [true,true];
 						1 enableChannel [true,true];
 						2 enableChannel [true,true];
-						3 enableChannel [true,true];
 					} else {
 						0 enableChannel [true,false];
-						1 enableChannel [true,false]; 
+						1 enableChannel [true,false];
 						2 enableChannel [true,false];
-						3 enableChannel [true,false];
 					};
 				};
 				sleep 1;
 			};
-		};
-
-		MAZ_fnc_disableChannels = {
-			while{MAZ_EP_enhancedRadioLeaderOnly} do {
-				private _grpPlyr = group player;
-				private _ldrGrp = leader _grpPlyr;
-
-				if(_ldrGrp == player) then {
-					0 enableChannel [true,true];
-					1 enableChannel [true,true];
-					2 enableChannel [true,true];
-				} else {
-					0 enableChannel [true,false];
-					1 enableChannel [true,false];
-					2 enableChannel [true,false];
-				};
-				sleep 1;
-			};
-			0 enableChannel [true,true];
-			1 enableChannel [true,true];
-			2 enableChannel [true,true];
 		};
 
 		MAZ_fnc_startRadioCooldown = {
@@ -195,21 +187,19 @@ private _value = (str {
 			};
 		"];
 		[] spawn MAZ_radioRequirement;
-		
-		if(MAZ_EP_enhancedRadioLeaderOnly) then {
-			[] spawn MAZ_disableChannels;
-		};
 	};
-	if(!isNil "MAZ_EP_fnc_addDiaryRecord") then {
+	[] spawn {
+		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_addDiaryRecord"};
 		["Enhanced Radio", "This makes radio noises happen when talking through global, side, command, and group channels. These sounds are audible to everyone around you, so when in PvP be aware of this."] call MAZ_EP_fnc_addDiaryRecord;
 	};
-	if(!isNil "MAZ_EP_fnc_createNotification") then {
+	[] spawn {
+		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_createNotification"};
 		[
 			"Enhanced Radio System has been loaded! Beep! Beep! Over!",
 			"System Initialization Notification"
 		] spawn MAZ_EP_fnc_createNotification;
 	};
-	call MAZ_fnc_enhancedRadioCarrier;
+	[] spawn MAZ_fnc_enhancedRadioCarrier;
 }) splitString "";
 
 _value deleteAt (count _value - 1);

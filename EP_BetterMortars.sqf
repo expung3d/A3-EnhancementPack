@@ -26,11 +26,12 @@ if(missionNamespace getVariable ["MAZ_EP_BetterMortarsEnabled",false]) exitWith 
 private _varName = "MAZ_System_EnhancementPack_BM";
 private _myJIPCode = "MAZ_EPSystem_BM_JIP";
 
-MAZ_EP_BetterMortarsEnabled = true;
-publicVariable "MAZ_EP_BetterMortarsEnabled";
+["Better Mortars","Whether to enable the Better Mortars system.","MAZ_EP_BetterMortarsEnabled",true,"TOGGLE",[],"MAZ_BM"] call MAZ_EP_fnc_addNewSetting;
 
 private _value = (str {
 	MAZ_EP_fnc_mortarReBalanceCarrier = {
+		private _settings = ["MAZ_BM"] call MAZ_EP_fnc_getSettingsFromSettingsGroup;
+		waitUntil {uiSleep 0.1; [_settings] call MAZ_EP_fnc_isSettingsGroupInitiliazed;};
 		MAZ_fnc_openMortarRangeCard = {
 			disableSerialization;
 			showChat true;
@@ -153,11 +154,15 @@ private _value = (str {
 		};
 
 		MAZ_fnc_giveMortarEH = {
+			waitUntil {uisleep 0.1;!isNull (findDisplay 46) && alive player};
+			sleep 0.1;
+			
 			if(!isNil "MAZ_EH_GetInMan_MortarCard") then {
 				player removeEventHandler ["GetInMan",MAZ_EH_GetInMan_MortarCard];
 			};
 			MAZ_EH_GetInMan_MortarCard = player addEventHandler ["GetInMan",{
 				params ["_unit", "_role", "_vehicle", "_turret"];
+				if(!MAZ_EP_BetterMortarsEnabled) exitWith {};
 				if(typeOf _vehicle isKindOf "Mortar_01_base_F") then {
 					call MAZ_fnc_openMortarRangeCard;
 					enableEngineArtillery false;
@@ -169,6 +174,7 @@ private _value = (str {
 			};
 			MAZ_EH_GetOutMan_MortarCard = player addEventHandler ["GetOutMan", {
 				params ["_unit", "_role", "_vehicle", "_turret"];
+				if(!MAZ_EP_BetterMortarsEnabled) exitWith {};
 				if(typeOf _vehicle isKindOf "Mortar_01_base_F") then {
 					call MAZ_fnc_closeMortarRangeCard;
 					enableEngineArtillery true;
@@ -180,6 +186,7 @@ private _value = (str {
 			};
 			MAZ_EH_FiredMan_MortarLoudness = player addEventHandler ["FiredMan",{
                 params ["_unit", "_weapon", "_muzzle", "_mode", "_ammo", "_magazine", "_projectile", "_vehicle"];
+				if(!MAZ_EP_BetterMortarsEnabled) exitWith {};
                 if(typeOf _vehicle isKindOf "Mortar_01_base_F") then {
 					private _isEarplugsIn = player getVariable ['isEarplugsIn',false];
 					if(_isEarplugsIn) then {
@@ -196,6 +203,7 @@ private _value = (str {
 			comment "TODO : Make ear ringing not stack";
             MAZ_EH_FiredNear_MortarLoudness = player addEventHandler ["FiredNear", {
                 params ["_unit", "_firer", "_distance", "_weapon", "_muzzle", "_mode", "_ammo", "_gunner"];
+				if(!MAZ_EP_BetterMortarsEnabled) exitWith {};
 				if(((typeOf (vehicle _firer)) isKindOf "Mortar_01_base_F") && _distance <= 15) then {
 					private _isEarplugsIn = player getVariable ['isEarplugsIn',false];
 					if(_isEarplugsIn) then {
@@ -207,18 +215,20 @@ private _value = (str {
 				};
             }];
 		};
-		call MAZ_fnc_giveMortarEH;
+		[] spawn MAZ_fnc_giveMortarEH;
 	};
-	if(!isNil "MAZ_EP_fnc_addDiaryRecord") then {
+	[] spawn {
+		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_addDiaryRecord"};
 		["Balanced Mortars", "Mortars don't have artillery computers and require usage of a range card which makes fire inaccurate. In addition, when firing or near fired mortars your ears will ring. Ringing is reduced when using earplugs."] call MAZ_EP_fnc_addDiaryRecord;
 	};
-	if(!isNil "MAZ_EP_fnc_createNotification") then {
+	[] spawn {
+		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_createNotification"};
 		[
 			"Better Mortars System has been loaded! Mortars will now require a rangecard to be used accurately!",
 			"System Initialization Notification"
 		] spawn MAZ_EP_fnc_createNotification;
 	};
-	call MAZ_EP_fnc_mortarReBalanceCarrier;
+	[] spawn MAZ_EP_fnc_mortarReBalanceCarrier;
 }) splitString "";
 
 _value deleteAt (count _value - 1);

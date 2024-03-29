@@ -26,13 +26,14 @@ if(missionNamespace getVariable ["MAZ_EP_sitOnQuadbikes",false]) exitWith {playS
 private _varName = "MAZ_System_EnhancementPack_SOQ";
 private _myJIPCode = "MAZ_EPSystem_SOQ_JIP";
 
-MAZ_EP_sitOnQuadbikes = true;
-publicVariable "MAZ_EP_sitOnQuadbikes";
+["Sit On Quadbikes","Whether to enable the Sit on Quadbikes system.","MAZ_EP_sitOnQuadbikes",true,"TOGGLE",[],"MAZ_SOQ"] call MAZ_EP_fnc_addNewSetting;
 
 private _value = (str {
 	MAZ_EP_fnc_quadbikesCarrier = {
+		private _settings = ["MAZ_SOQ"] call MAZ_EP_fnc_getSettingsFromSettingsGroup;
+		waitUntil {uiSleep 0.1; [_settings] call MAZ_EP_fnc_isSettingsGroupInitiliazed;};
 		MAZ_fnc_quadbikeServerLoop = {
-			while{MAZ_EP_sitOnQuadbikes} do {
+			while{MAZ_EP_CoreEnabled} do {
 				[] call MAZ_fnc_quadbikeServerInit;
 				sleep 1;
 			};
@@ -55,6 +56,7 @@ private _value = (str {
 
 		MAZ_fnc_canSitOnQuadbike = {
 			params ["_quad","_caller"];
+			if(!MAZ_EP_sitOnQuadbikes) exitWith {false};
 			private _sitter = _quad getVariable ["MAZ_sittingOnFront",objNull];
 			if(_quad distance _caller > 2.75) exitWith {false};
 			if(_caller in _quad) exitWith {false};
@@ -163,16 +165,18 @@ private _value = (str {
 			[] spawn MAZ_fnc_quadbikeServerLoop;
 		};
 	};
-	if(!isNil "MAZ_EP_fnc_addDiaryRecord") then {
+	[] spawn {
+		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_addDiaryRecord"};
 		["Sit on Quadbikes", "Allows players to sit on the front of quadbikes as an additional seat."] call MAZ_EP_fnc_addDiaryRecord;
 	};
-	if(!isNil "MAZ_EP_fnc_createNotification") then {
+	[] spawn {
+		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_createNotification"};
 		[
 			"Sit on Quadbikes System has been loaded! Now you can third wheel on a quadbike!",
 			"System Initialization Notification"
 		] spawn MAZ_EP_fnc_createNotification;
 	};
-	call MAZ_EP_fnc_quadbikesCarrier;
+	[] spawn MAZ_EP_fnc_quadbikesCarrier;
 }) splitString "";
 
 _value deleteAt (count _value - 1);

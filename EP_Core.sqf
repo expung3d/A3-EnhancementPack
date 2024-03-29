@@ -3,7 +3,23 @@ if(!isNull (findDisplay 312) && {!isNil "this"} && {!isNull this}) then {
 	deleteVehicle this;
 };
 
-if(missionNamespace getVariable ["MAZ_EP_CoreEnabled",false]) exitWith {playSound "addItemFailed"; systemChat "[EP] - Core pack already running! Add the features you want.";};
+if(missionNamespace getVariable ["MAZ_EP_CoreEnabled",false]) exitWith {
+	[] spawn {
+		private _result = [
+			parseText "
+			<t size='1.3' align='center' color='#00BFBF'>Enhancement Pack Core is already running</t><br/>
+			<t size='1.0' align='center'>If you'd like to edit the settings of the systems that are running press OK, otherwise press CANCEL to continue Zeusing.</t> ", 
+			"Enhancement Pack Already Running", 
+			true, 
+			true,
+			(findDisplay 312)
+		] call BIS_fnc_guiMessage;
+		showChat true;
+		if (_result) then {
+			call MAZ_EP_fnc_editSettings;
+		};
+	};
+};
 
 private _varName = "MAZ_System_EnhancementPackCore";
 private _myJIPCode = "MAZ_EPSystem_Core_JIP";
@@ -17,19 +33,29 @@ publicVariable "MAZ_globalLaserMarkers";
 MAZ_EP_CoreEnabled = true;
 publicVariable "MAZ_EP_CoreEnabled";
 
+MAZ_EP_Settings = [];
+publicVariable "MAZ_EP_Settings";
+
 private _value = (str {
 	if(isNil "MAZ_keyAr" && isNil "MAZ_fnc_keybindCarrier") then {
 		MAZ_fnc_keybindCarrier = {
 			MAZ_isChangingKeybind = false;
 
 			MAZ_fnc_newKeybind = {
-				params ["_displayName","_description","_keyCode","_code",["_shift",false],["_ctrl",false],["_alt",false],["_override",false],["_zeusKeybind",false]];
+				params ["_displayName","_description","_keyCode","_code",["_shift",false],["_ctrl",false],["_alt",false],["_override",false],["_zeusKeybind",false],["_keySave",""]];
 				if(isNil "MAZ_KeybindData") then {
 					MAZ_KeybindData = [];
 				};
+				private _modifiers = [_shift,_ctrl,_alt];
 				private _display = if(_zeusKeybind) then {findDisplay 312} else {findDisplay 46};
+				private _savedKey = [_keySave] call MAZ_fnc_getKeybindData;
+				if !(_savedKey isEqualTo []) then {
+					_savedKey params ["_key","_mod"]
+					_keyCode = _key;
+					_modifiers = _mod;
+				};
 
-				MAZ_KeybindData pushBack [_displayName,_description,_display,_keyCode,_code,[_shift,_ctrl,_alt],_override];
+				MAZ_KeybindData pushBack [_displayName,_description,_display,_keyCode,_code,_modifiers,_override,_keySave];
 			};
 
 			MAZ_fnc_removeKeybind = {
@@ -41,12 +67,59 @@ private _value = (str {
 				false
 			};
 
+			MAZ_fnc_resetSavedKeybinds = {
+				profileNamespace setVariable ["MAZ_SavedKeybinds",[]];
+				saveProfileNamespace;
+			};
+
+			MAZ_fnc_getKeybindData = {
+				params ["_nameSearch"];
+				private _savedKeys = profileNamespace getVariable ["MAZ_SavedKeybinds",[]];
+				private _keyData = [];
+				{
+					_x params ["_name","_data"];
+					if(toLower _nameSearch == toLower _name) then {
+						_keyData = _data;
+						break;
+					};
+				}forEach _savedKeys;
+				_keyData;
+			};
+
+			MAZ_fnc_getSavedKeybindIndex = {
+				params ["_nameSearch"];
+				private _savedKeys = profileNamespace getVariable ["MAZ_SavedKeybinds",[]];
+				private _index = -1;
+				{
+					_x params ["_name","_data"];
+					if(toLower _nameSearch == toLower _name) then {
+						_index = _forEachIndex;
+						break;
+					};
+				}forEach _savedKeys;
+				_index;
+			};
+
+			MAZ_fnc_saveKeybind = {
+				params ["_name","_key","_mod"];
+				private _savedKeys = profileNamespace getVariable ["MAZ_SavedKeybinds",[]];
+				private _keyIndex = [_name] call MAZ_fnc_getSavedKeybindIndex;
+				if(_keyIndex == -1) then {
+					_savedKeys pushBack [_name,[_key,_mod]];
+				} else {
+					_savedKey set [_keyIndex,[_name,[_key,_mod]]];
+				};
+				profileNamespace setVariable ["MAZ_SavedKeybinds",_savedKey];
+				saveProfileNamespace;
+			};
+
 			MAZ_fnc_changeKeybindKey = {
 				params ["_index","_newKeyCode","_modifierDataNew"];
 				private _KeybindData = MAZ_KeybindData select _index;
-				_KeybindData params ["_displayName","_description","_display","_keyCode","_code","_modifierData"];
+				_KeybindData params ["_displayName","_description","_display","_keyCode","_code","_modifierData","_override","_keySave"];
 				if(_keyCode != _newKeyCode) then {
-					MAZ_KeybindData set [_index,[_displayName,_description,_display,_newKeyCode,_code,_modifierDataNew]]
+					MAZ_KeybindData set [_index,[_displayName,_description,_display,_newKeyCode,_code,_modifierDataNew,_override,_keySave]];
+					[_keySave,_newKeyCode,_modifierDataNew] call MAZ_fnc_saveKeybind;
 				};
 			};
 
@@ -156,6 +229,7 @@ private _value = (str {
 			};
 
 			MAZ_fnc_modifyKeybindsInterface = {
+				if(!isNull (uiNamespace getVariable ["MAZ_KeybindMenu",displayNull])) exitWith {};
 				if(!isNull (findDisplay 49)) then {
 					(findDisplay 49) closeDisplay 0;
 					waitUntil {(isNull (findDisplay 49))};
@@ -275,7 +349,9 @@ private _value = (str {
 					{
 						_x params ["","","_displayBind","_keyCode","_code","_modifiers","_override"];
 						_modifiers params ["_isShift","_isCtrl","_isAlt"];
-						if(_shift == _isShift && _ctrl == _isCtrl && _alt == _isAlt && _key == _keyCode && _displayBind == _display && !MAZ_isChangingKeybind) then {
+						private _dontRun = false;
+						if((_isShift && !_shift) || (_isCtrl && !_ctrl) || (_isAlt && !_alt)) then {_dontRun = true;};
+						if(_key == _keyCode && !_dontRun && _displayBind == _display && !MAZ_isChangingKeybind) then {
 							[] call _code;
 							if(_override) then {
 								_doSkip = true;
@@ -285,7 +361,7 @@ private _value = (str {
 					_doSkip
 				}];
 				if(!isNil "MAZ_Key_Keybinds312") then {
-					(findDisplay 46) displayRemoveEventHandler ["KeyDown",MAZ_Key_Keybinds312];
+					(findDisplay 312) displayRemoveEventHandler ["KeyDown",MAZ_Key_Keybinds312];
 				};
 				MAZ_Key_Keybinds312 = (findDisplay 312) displayAddEventHandler ["KeyDown",{
 					params ['_display', '_key', '_shift', '_ctrl', '_alt'];
@@ -293,7 +369,9 @@ private _value = (str {
 					{
 						_x params ["","","_displayBind","_keyCode","_code","_modifiers","_override"];
 						_modifiers params ["_isShift","_isCtrl","_isAlt"];
-						if(_shift == _isShift && _ctrl == _isCtrl && _alt == _isAlt && _key == _keyCode && _displayBind == _display && !MAZ_isChangingKeybind) then {
+						private _dontRun = false;
+						if((_isShift && !_shift) || (_isCtrl && !_ctrl) || (_isAlt && !_alt)) then {_dontRun = true;};
+						if(_key == _keyCode && !_dontRun && _displayBind == _display && !MAZ_isChangingKeybind) then {
 							[] call _code;
 							if(_override) then {
 								_doSkip = true;
@@ -310,7 +388,7 @@ private _value = (str {
 				sleep 0.1;
 				[] spawn MAZ_fnc_KeybindSystemInit;
 				if(isNil "MAZ_Key_MainKey") then {
-					MAZ_Key_MainKey = ["Keybinds Menu","Edit the in-game keybinds.",11,{[] call MAZ_fnc_modifyKeybindsInterface;},false,true] call MAZ_fnc_newKeybind;
+					MAZ_Key_MainKey = ["Keybinds Menu","Edit the in-game keybinds.",11,{[] call MAZ_fnc_modifyKeybindsInterface;},false,true,false,false,false,"MAZ_KeyMenu"] call MAZ_fnc_newKeybind;
 				};
 			};
 		};
@@ -318,6 +396,8 @@ private _value = (str {
 	};
 
 	MAZ_EP_fnc_defaultKeybindsCarrier = {
+		MAZ_EP_userActions = [];
+		
 		MAZ_smokeGrenades = [
 			'SmokeShell',
 			'SmokeShellOrange',
@@ -973,13 +1053,13 @@ private _value = (str {
 				(findDisplay 46) displayRemoveEventHandler ["KeyDown",earplugsBind_Comp_MAZ];
 				[[],{}] remoteExec ['spawn',0,'MAZ_testEarplugs'];
 			};
-			MAZ_Key_Earplugs = ["Toggle Earplugs","Toggle your earplugs.",207,{call MAZ_fnc_earplugsLite;},false,false] call MAZ_fnc_newKeybind;
-			MAZ_Key_Holster = ["Holster Weapon","Holster your weapon.",35,{[] spawn MAZ_fnc_holsterWeapon;},false,false] call MAZ_fnc_newKeybind;
-			MAZ_Key_ViewDist = ["Edit View Distance","Edit your view distance (Local).",73,{[] spawn MAZ_fnc_liteViewDistanceMenu;},false,false,false,true] call MAZ_fnc_newKeybind;
-			MAZ_Key_Unflip = ["Unflip Vehicle","Unflip the vehicle you look at.",12,{[] spawn MAZ_liteUnflip;},false,true] call MAZ_fnc_newKeybind;
-			MAZ_Key_SitDown = ["Sit Down","Sit down in the chair.",208,{[] spawn MAZ_fnc_sitDown;},false,false,false,true] call MAZ_fnc_newKeybind;
-			MAZ_Key_StandUp = ["Stand Up","Stand up from the chair.",200,{[] spawn MAZ_fnc_standUp;},false,false,false,true] call MAZ_fnc_newKeybind;
-			MAZ_Key_DeploySmoke = ["Deploy Smokes","Use smoke while injured.",57,{[] spawn MAZ_fnc_openSmokeGrenadeMenu;},false,false] call MAZ_fnc_newKeybind;
+			MAZ_Key_Earplugs = ["Toggle Earplugs","Toggle your earplugs.",207,{call MAZ_fnc_earplugsLite;},false,false,false,false,false,"MAZ_Earplugs"] call MAZ_fnc_newKeybind;
+			MAZ_Key_Holster = ["Holster Weapon","Holster your weapon.",35,{[] spawn MAZ_fnc_holsterWeapon;},false,false,false,false,false,"MAZ_Holster"] call MAZ_fnc_newKeybind;
+			MAZ_Key_ViewDist = ["Edit View Distance","Edit your view distance (Local).",73,{[] spawn MAZ_fnc_liteViewDistanceMenu;},false,false,false,true,false,"MAZ_ViewDistance"] call MAZ_fnc_newKeybind;
+			MAZ_Key_Unflip = ["Unflip Vehicle","Unflip the vehicle you look at.",12,{[] spawn MAZ_liteUnflip;},false,true,false,false,false,"MAZ_Unflip"] call MAZ_fnc_newKeybind;
+			MAZ_Key_SitDown = ["Sit Down","Sit down in the chair.",208,{[] spawn MAZ_fnc_sitDown;},false,false,false,true,false,"MAZ_SitDown"] call MAZ_fnc_newKeybind;
+			MAZ_Key_StandUp = ["Stand Up","Stand up from the chair.",200,{[] spawn MAZ_fnc_standUp;},false,false,false,true,false,"MAZ_SitDown"] call MAZ_fnc_newKeybind;
+			MAZ_Key_DeploySmoke = ["Deploy Smokes","Use smoke while injured.",57,{[] spawn MAZ_fnc_openSmokeGrenadeMenu;},false,false,false,false,false,"MAZ_UseSmoke"] call MAZ_fnc_newKeybind;
 
 			if(!isNil "MAZ_DEH_KeyDown_Jump") then {
 				(findDisplay 46) displayRemoveEventHandler ["KeyDown",MAZ_DEH_KeyDown_Jump];
@@ -1007,26 +1087,6 @@ private _value = (str {
 				_override
 			}];
 
-			if(!isNil "MAZ_EH_GetInMan_VehicleAnimations") then {
-				player removeEventHandler ["GetInMan",MAZ_EH_GetInMan_VehicleAnimations];
-			};
-			MAZ_EH_GetInMan_VehicleAnimations = player addEventHandler ["GetInMan",{
-				params ["_unit", "_role", "_vehicle", "_turret"];
-				comment "
-					TODO MUST REWRITE
-				";
-			}];
-
-			if(!isNil "MAZ_EH_GetOutMan_VehicleAnimations") then {
-				player removeEventHandler ["GetOutMan",MAZ_EH_GetOutMan_VehicleAnimations];
-			};
-			MAZ_EH_GetOutMan_VehicleAnimations = player addEventHandler ["GetOutMan",{
-				params ["_unit", "_role", "_vehicle", "_turret"];
-				comment "
-					TODO MUST REWRITE
-				";
-			}];
-
 			if(!isNil "MAZ_EH_GetOutMan_AutoHALO") then {
 				player removeEventHandler ["GetOutMan",MAZ_EH_GetOutMan_AutoHALO];
 			};
@@ -1051,6 +1111,13 @@ private _value = (str {
 				comment "Otherwise prevent marker deletion";
 				true
 			}];
+
+			if((player getVariable ["LM_MEH_playerNames",-1]) != -1) then {
+				removeMissionEventHandler ['Draw3D', (player getVariable ['LM_MEH_playerNames',-1])];
+			};
+			if((player getVariable ["LM_MEH_killFeed",-1]) != -1) then {
+				removeMissionEventHandler ['EntityKilled', (player getVariable ['LM_MEH_killFeed',-1])];
+			};  
 		};
 
 		MAZ_fnc_initDefaultAddonServer = {
@@ -1080,6 +1147,28 @@ private _value = (str {
 				};
 
 				sleep 5;
+			};
+		};
+
+		MAZ_fnc_removeTrollBackpacks = {
+			while {MAZ_EP_CoreEnabled} do {
+				comment "Prevent pistol whippers";
+				if(currentWeapon player == handgunWeapon player && weaponLowered player && stance player == "CROUCH") then {
+					player setAnimSpeedCoef 0.8;
+				} else {
+					player setAnimSpeedCoef 1;
+				};
+
+				comment "Prevent respawn bags and turrets";
+				private _bp = backpack player;
+				if("respawn" in (toLower _bp)) then {
+					removeBackpackGlobal player;
+					continue;
+				};
+				if(_bp isKindOf "Weapon_Bag_Base") then {
+
+				};
+				sleep 0.5;
 			};
 		};
 
@@ -1269,6 +1358,569 @@ private _value = (str {
 			};
 		};
 
+		comment "User Actions System";
+
+			MAZ_EP_fnc_addUserAction = {
+				params [
+					["_actionText","User Action",[""]],
+					["_actionCondition",{true},[{}]],
+					["_actionCode",{},[{}]],
+					["_icon","a3\ui_f\data\map\markers\military\dot_ca.paa",[""]],
+					["_childrenActions",[],[[]]],
+					["_position","",[""]]
+				];
+
+				if(isNil "MAZ_EP_userActions") then {
+					MAZ_EP_userActions = [];
+				};
+				MAZ_EP_userActions pushBack [_actionText,_actionCondition,_actionCode,_icon,_childrenActions,_position];
+			};
+
+			MAZ_EP_fnc_addUserActionChild = {
+				params [
+					["_userActionId",-1,[1,[]]],
+					["_actionText","User Action",[""]],
+					["_actionCondition",{true},[{}]],
+					["_actionCode",{},[{}]],
+					["_icon","a3\ui_f\data\map\markers\military\dot_ca.paa",[""]],
+					["_childrenActions",[],[[]]],
+					["_position","",[""]]
+				];
+				if(isNil "MAZ_EP_userActions") exitWith {};
+				if(_userAction isEqualType -1 && {_userActionId == -1}) exitWith {};
+
+				private _parentAction = [];
+				if(_userActionId isEqualType []) then {
+					_parentAction = +MAZ_EP_userActions;
+					{
+						if(_forEachIndex == 0) then {
+							_parentAction = _parentAction select _x;
+							continue;
+						};
+
+						_parentAction = _parentAction select 4 select _x;
+					}forEach _userActionId;
+
+				} else {
+					_parentAction = MAZ_EP_userActions select _userActionId;
+				};
+
+				_parentAction params ["_pActionText","_pActionCondition","_pActionCode","_pIcon","_pChildrenActions","_pPosition"];
+
+				private _newChildren = _pChildrenActions + [[_actionText,_actionCondition,_actionCode,_icon,_childrenActions,_position]];
+				_parentAction set [4, _newChildren];
+
+				if(_userActionId isEqualType []) then {
+					private _tempParent = +MAZ_EP_userActions;
+					private _tempOld = [];
+					
+					{
+						if(_forEachIndex == 0) then {
+							_tempOld pushBack (_tempParent select _x);
+							continue;
+						};
+						private _temp = (_tempOld select (_forEachIndex - 1)) select 4 select _x;
+						
+						_tempOld pushBack _temp;
+					}forEach _userActionId;
+
+					_tempOld pushBack [_actionText,_actionCondition,_actionCode,_icon,_childrenActions,_position];
+
+					{
+						if (_forEachIndex == (count _tempOld - 1)) then {continue};
+						private _action = _x;
+						private _actions = _action select 4;
+
+						_actions set [(_userActionId select _forEachIndex), (_tempOld select (_forEachIndex + 1))];
+						_action set [4, _actions];
+						_tempOld set [_forEachIndex, _action];
+					}forEachReversed _tempOld; 
+
+					MAZ_EP_userActions set [(_userActionId select 0), _tempOld select 0];
+				} else {
+					MAZ_EP_userActions set [_userActionId,_parentAction];
+				};
+			};
+
+			MAZ_EP_fnc_createUserActions = {
+				MAZ_EP_userActionsShown = true;
+				MAZ_EP_userActionPlayerPos = getPos player;
+				if(isNil "MAZ_EP_userActionsDrawn") then {
+					MAZ_EP_userActionsDrawn = [];
+				};
+
+				private _actionsToDraw = [];
+				{
+					_x params ["_text","_condition","_actionCode","_icon","_childrenActions","_position"];
+					if !(call _condition) then {continue};
+
+					_actionsToDraw pushBack _forEachIndex;
+				}forEach MAZ_EP_userActions;
+
+				private _actionCount = count _actionsToDraw;
+
+				if(_actionCount == 0) exitWith {
+					MAZ_EP_userActionsDrawn pushBack [-1,positionCameraToWorld [0, 0, 2]];
+				};
+
+				private _radius = 0.15;
+				private _intervals = 360 / _actionCount;
+				private _origin = positionCameraToWorld [0, 0, 2];
+				{
+					private _action = MAZ_EP_userActions select _x;
+
+					private _circumferencePos = _forEachIndex * _intervals;
+			
+					private _xPos2D = 0.5 + _radius * cos(_circumferencePos);
+					private _yPos2D = 0.5 + _radius * sin(_circumferencePos);
+					private _pos = screenToWorld [_xPos2D, _yPos2D];
+
+					private _alignRight = true;
+					if(false) then {
+						_alignRight = false;
+					};
+
+					MAZ_EP_userActionsDrawn pushBack [_x,_pos,_alignRight];
+				}forEach _actionsToDraw;
+			};
+
+			MAZ_EP_fnc_destroyUserActions = {
+				MAZ_EP_userActionsDrawn = [];
+				if(!isNil "MAZ_EP_selectedUserAction") then {
+					private _action = MAZ_EP_userActions select MAZ_EP_selectedUserAction;
+					_action params ["_text","_condition","_actionCode","_icon","_childrenActions","_position"];
+					call _actionCode;
+					MAZ_EP_selectedUserAction = nil;
+				};
+			};
+
+			MAZ_EP_fnc_showUserActions = {
+				params [["_mode","self",[""]]];
+
+				if((getPos player distance MAZ_EP_userActionPlayerPos) > 0.3) exitWith {};
+
+				switch (_mode) do {
+					case "self": {
+
+					};
+					case "external": {
+
+					};
+				};
+				comment "private _cursorPos = positionCameraToWorld [0, 0, 2]";
+				private _cursorPos = screenToWorld [0.5,0.5];
+
+				private _centerDot = drawIcon3D ["a3\ui_f\data\igui\cfg\cursors\selectover_ca.paa",[0.8,0,0,1], _cursorPos, 1,1, 0];
+				if(isNil "MAZ_EP_userActionsDrawn") then {
+					MAZ_EP_userActionsDrawn = [];
+				};
+
+				if(count MAZ_EP_userActionsDrawn == 1 && {(MAZ_EP_userActionsDrawn select 0 select 0) == -1}) exitWith {
+					private _pos = MAZ_EP_userActionsDrawn select 0 select 1;
+					private _noActions = drawIcon3D [
+						"a3\ui_f\data\map\markers\military\dot_ca.paa",
+						[1,1,1,1], 
+						_pos, 
+						1, 
+						1, 
+						0, 
+						"No Actions", 
+						2, 
+						0.035, 
+						"PuristaMedium", 
+						"right", 
+						false, 
+						0, 
+						-0.025
+					];
+				};
+
+				private _closestAction = -1;
+				private _closestDrawPos = [];
+				private _closestValue = -1;
+				{
+					_x params ["_actionIndex","_drawPos","_alignRight"];
+
+					systemChat (str _x);
+					private _action = MAZ_EP_userActions select _actionIndex;
+					_action params ["_text","_condition","_actionCode","_icon","_childrenActions","_position"];
+
+					if(_alignRight) then {
+						private _icon = drawIcon3D [_icon,[1,1,1,1], _drawPos, 1, 1, 0, _text, 2, 0.035, "PuristaMedium", "right", false, 0, -0.025];
+					} else {
+						private _icon = drawIcon3D [_icon,[1,1,1,1], _drawPos, 1, 1, 0, _text, 2, 0.035, "PuristaMedium", "left", false, 0, -0.025];
+					};
+
+					private _distanceToCursor = [0.5,0.5] distance2D (worldToScreen _drawPos);
+					if(_distanceToCursor < 0.1 && (_distanceToCursor < _closestValue || _closestValue == -1)) then {
+						systemChat "Closest";
+						_closestAction = _actionIndex;
+						_closestDrawPos = _drawPos;
+						_closestValue = _distanceToCursor;
+					};
+				}forEach MAZ_EP_userActionsDrawn;
+
+				if(_closestAction != -1) then {
+					private _selectedIcon = drawIcon3D ["a3\ui_f\data\map\groupicons\selector_selected_ca.paa",[0.8,0,0,0.8], _closestDrawPos, 1, 1, 0];
+					MAZ_EP_selectedUserAction = _closestAction;
+				} else {
+					MAZ_EP_selectedUserAction = nil;
+				};
+			};
+			if(!isNil "MAZ_EP_MEH_Draw3D_UserAction") then {
+				removeMissionEventHandler ["Draw3D", MAZ_EP_MEH_Draw3D_UserAction];
+			};
+			MAZ_EP_MEH_Draw3D_UserAction = addMissionEventHandler ["Draw3D", {
+				if(missionNamespace getVariable ["MAZ_EP_userActionsShown",false]) then {
+					["self"] call MAZ_EP_fnc_showUserActions;
+				};
+			}];
+
+			if(!isNil "MAZ_EP_DEH_KeyDown_UserAction") then {
+				(findDisplay 46) displayRemoveEventHandler ["KeyDown",MAZ_EP_DEH_KeyDown_UserAction];
+			};
+			MAZ_EP_DEH_KeyDown_UserAction = (findDisplay 46) displayAddEventHandler ["KeyDown",{
+				params ["_displayOrControl", "_key", "_shift", "_ctrl", "_alt"];
+				if(_key != 	219 || MAZ_EP_userActionsShown) exitWith {};
+				if(!MAZ_EP_userActionsShown) then {
+					call MAZ_EP_fnc_createUserActions;
+				};
+			}];
+
+			if(!isNil "MAZ_EP_DEH_KeyUp_UserAction") then {
+				(findDisplay 46) displayRemoveEventHandler ["KeyUp",MAZ_EP_DEH_KeyUp_UserAction];
+			};
+			MAZ_EP_DEH_KeyUp_UserAction = (findDisplay 46) displayAddEventHandler ["KeyUp",{
+				params ["_displayOrControl", "_key", "_shift", "_ctrl", "_alt"];
+				if(_key != 	219) exitWith {};
+				MAZ_EP_userActionsShown = false;
+				call MAZ_EP_fnc_destroyUserActions;
+			}];
+
+		comment "Settings System";
+
+			MAZ_EP_fnc_addNewSetting = {
+				params ["_displayName","_description","_variableName","_value",["_type","TOGGLE"],["_params",[],[[]]],["_settingsGroup","",[""]]];
+				if(isNil "_displayName" || isNil "_description" || isNil "_variableName" || isNil "_value") exitWith {false};
+				_type = toUpper _type;
+				if !(_type in ["TOGGLE","SLIDER"]) exitWith {false};
+				if !(isServer) exitWith {
+					private _savedVar = [_variableName,_value] call MAZ_EP_fnc_getSavedSettingFromProfile;
+					_this set [3,_savedVar];
+					[_this,{
+						_this call MAZ_EP_fnc_addNewSetting;
+					}] remoteExec ['spawn',2];
+					"Ran on server";
+				};
+				MAZ_EP_Settings pushBack [_displayName,_description,_variableName,_value,_type,_params,_settingsGroup];
+				publicVariable "MAZ_EP_Settings";
+				missionNamespace setVariable [_variableName,_value,true];
+				true;
+			};
+
+			MAZ_EP_fnc_getSettingsFromSettingsGroup = {
+				params ["_settingsGroup"];
+				private _settings = [];
+				{
+					private _group = _x select 6;
+					if(toLower _settingsGroup == toLower _group) then {
+						_settings pushBack _forEachIndex;
+					};
+				}forEach MAZ_EP_Settings;
+				_settings;
+			};
+
+			MAZ_EP_fnc_isSettingsGroupInitiliazed = {
+				params ["_settings"];
+				private _init = true;
+				{
+					private _setting = MAZ_EP_Settings select _x;
+					private _varName = _setting select 2;
+					private _var = missionNamespace getVariable [_varName,nil];
+					if(isNil "_var") then {
+						_init = false;
+						break;
+					};
+				}forEach _settings;
+				_init;
+			};
+
+			MAZ_EP_fnc_updateSetting = {
+				params ["_index","_varName","_value"];
+				if(!isServer) exitWith {
+					[_varName,_value] call MAZ_EP_fnc_saveSettingToProfile;
+					[_this, {
+						_this call MAZ_EP_fnc_updateSetting;
+					}] remoteExec ['spawn',2];
+				};
+				private _setting = MAZ_EP_Settings select _index;
+				_setting set [3,_value];
+				MAZ_EP_Settings set [_index,_setting];
+				missionNamespace setVariable [_varName,_value,true];
+				publicVariable "MAZ_EP_Settings";
+			};
+
+			MAZ_EP_fnc_saveSettingToProfile = {
+				params ["_name","_value"];
+				private _existingSettings = profileNamespace getVariable ["MAZ_EP_SavedSettings",nil];
+				if(isNil "_existingSettings") then {
+					_existingSettings = [];
+				};
+				if((_existingSettings select 0) isEqualType false) then {
+					_existingSettings = [];
+				};
+
+				private _found = false;
+				{
+					_x params ["_xName","_xValue"];
+					if(toLower _xName != toLower _name) then {continue};
+					_found = true;
+					_existingSettings set [_forEachIndex,[_name,_value]];
+				}forEach _existingSettings;
+				if(!_found) then {
+					_existingSettings pushBack [_name,_value];
+				};
+				profileNamespace setVariable ["MAZ_EP_SavedSettings",_existingSettings];
+				saveProfileNamespace;
+			};
+
+			MAZ_EP_fnc_getSavedSettingFromProfile = {
+				params ["_name","_default"];
+				private _existingSettings = profileNamespace getVariable ["MAZ_EP_SavedSettings",nil];
+				if(isNil "_existingSettings") exitWith {_default};
+				private _savedValue = nil;
+				{
+					_x params ["_xName","_xValue"];
+					if(toLower _xName != toLower _name) then {continue};
+					_savedValue = _xValue;
+					break;
+				}forEach _existingSettings;
+				if(isNil "_savedValue") then {
+					_savedValue = _default;
+					[_name,_default] call MAZ_EP_fnc_saveSettingToProfile;
+				};
+				_savedValue
+			};
+
+			MAZ_EP_fnc_initSettings = {
+				{
+					_x params ["","","_varName","_value","",""];
+					missionNamespace setVariable [_varName,_value];
+				}forEach MAZ_EP_Settings;
+			};
+
+			MAZ_EP_fnc_editSettings = {
+				if(count MAZ_EP_Settings <= 0) exitWith {
+					["There are no settings to edit!"] call MAZ_EP_fnc_systemMessage;
+				};
+				with uiNamespace do {
+					createDialog "RscDisplayEmpty";
+					showchat true;
+					MAZ_EP_settingsDialog = findDisplay -1;
+
+					private _maxWidth = 0.20625 * safezoneW;
+
+					private _contentGroup = MAZ_EP_settingsDialog ctrlCreate ["RscControlsGroupNoScrollbars",110];
+					_contentGroup ctrlSetPosition [0.396875 * safezoneW + safezoneX,0.269 * safezoneH + safezoneY,_maxWidth,0];
+					_contentGroup ctrlCommit 0;
+
+					private _bg = MAZ_EP_settingsDialog ctrlCreate ["RscPicture",-1,_contentGroup];
+					_bg ctrlSetPosition [0,0,_maxWidth,0];
+					_bg ctrlSetText "#(argb,8,8,3)color(0.2,0.2,0.2,0.9)";
+
+					private _color = ["GUI", "BCG_RGB"] call BIS_fnc_displayColorGet;
+					private _label = MAZ_EP_settingsDialog ctrlCreate ["RscText",-1,_contentGroup];
+					_label ctrlSetPosition [0,0,_maxWidth,0.022 * safezoneH];
+					_label ctrlSetText "Enhancement Pack Settings";
+					_label ctrlSetTextColor (["GUI", "TITLETEXT_RGB"] call BIS_fnc_displayColorGet);
+					_label ctrlSetBackgroundColor _color;
+					_label ctrlCommit 0;
+
+					private _yPos = 0.05;
+					private _settingHeight = 0.06;
+					private _settingsWidth = _maxWidth * 0.98;
+					private _xOffset = (_maxWidth - _settingsWidth) / 2;
+
+					private _settings = [];
+					{
+						_x params ["_displayName","_tooltip","_varName","_value","_type","_params"];
+						private _settingGroup = MAZ_EP_settingsDialog ctrlCreate ["RscControlsGroupNoScrollbars",-1,_contentGroup];
+						_settingGroup ctrlSetPosition [_xOffset,_yPos,_settingsWidth,_settingHeight];
+						_settingGroup ctrlCommit 0;
+
+						private _settingBg = MAZ_EP_settingsDialog ctrlCreate ["RscPicture",-1,_settingGroup];
+						_settingBg ctrlSetPosition [0,0,_settingsWidth,_settingHeight];
+						_settingBg ctrlSetText "#(argb,8,8,3)color(0.2,0.2,0.2,0.9)";
+						_settingBg ctrlCommit 0;
+
+						private _settingLabel = MAZ_EP_settingsDialog ctrlCreate ["RscText",-1,_settingGroup];
+						if(count _displayName > 17) then {
+							_tooltip = _displayName + "\n" + _tooltip;
+							_displayName = (_displayName select [0,17]) + "...";
+						};
+						_settingLabel ctrlSetText _displayName;
+						_settingLabel ctrlSetTooltip _tooltip;
+						_settingLabel ctrlSetBackgroundColor [0,0,0,0.2];
+						_settingLabel ctrlSetPosition [0,0,_settingsWidth * 0.4,_settingHeight];
+						_settingLabel ctrlCommit 0;
+
+						private _settingCtrl = controlNull;
+						switch (_type) do {
+							case "TOGGLE": {
+								_settingCtrl = MAZ_EP_settingsDialog ctrlCreate ["RscToolbox",10,_settingGroup];
+								_settingCtrl ctrlSetPosition [_settingsWidth * 0.4,0,_settingsWidth * 0.6,_settingHeight];
+								lbClear _settingCtrl;
+								_settingCtrl lbAdd "Disabled";
+								_settingCtrl lbAdd "Enabled";
+								_settingCtrl lbSetCurSel (parseNumber _value);
+								_settingCtrl ctrlCommit 0;
+							};
+							case "SLIDER": {
+								_params params ["_minValue","_maxValue"];
+								_settingCtrl = MAZ_EP_settingsDialog ctrlCreate ["RscXSliderH",20,_settingGroup];
+								_settingCtrl ctrlSetPosition [_settingsWidth * 0.4,0,_settingsWidth * 0.5,_settingHeight];
+								_settingCtrl sliderSetRange [_minValue,_maxValue];
+								_settingCtrl sliderSetPosition _value;
+								_settingCtrl ctrlAddEventHandler ["sliderPosChanged", {
+									params ["_ctrlSlider", "_value"];
+									private _controlGroup = ctrlParentControlsGroup _ctrlSlider;
+									private _ctrlEdit = _controlGroup controlsGroupCtrl 21;
+									private _roundedValue = round _value;
+									_ctrlEdit ctrlSetText format ["%1",_roundedValue];
+								}];
+								_settingCtrl ctrlCommit 0;
+
+								private _sliderEdit = MAZ_EP_settingsDialog ctrlCreate ["RscEdit",21,_settingGroup];
+								_sliderEdit ctrlSetPosition [_settingsWidth * 0.9, 0, _settingsWidth * 0.1, _settingHeight];
+								_sliderEdit ctrlSetText (str _value);
+								_sliderEdit ctrlAddEventHandler ["KeyUp",{
+									params ["_displayOrControl", "_key", "_shift", "_ctrl", "_alt"];
+									private _num = parseNumber (ctrlText _displayOrControl);
+									private _ctrlGroup = ctrlParentControlsGroup _displayOrControl;
+									private _sliderCtrl = _ctrlGroup controlsGroupCtrl 20;
+									_sliderCtrl sliderSetPosition _num;
+								}];
+								_sliderEdit ctrlCommit 0;
+							};
+						};
+						_settingCtrl setVariable ["MAZ_settingVarName", _varName];
+						_settings pushBack _settingCtrl;
+
+						_yPos = _yPos + _settingHeight + 0.01;
+					}forEach (missionNamespace getVariable ["MAZ_EP_Settings",[]]);
+
+					_contentGroup setVariable ["MAZ_settingsCtrls",_settings];
+
+					_bg ctrlSetPositionH _yPos;
+					_bg ctrlCommit 0;
+
+					if(_yPos > 1.3) then {
+						_yPos = 1.3;
+					} else {
+						_yPos = _yPos - _settingHeight + 0.02;
+					};
+
+					private _cancelButton = MAZ_EP_settingsDialog ctrlCreate ["RscButtonMenu",-1];
+					_cancelButton ctrlSetPosition [0.396875 * safezoneW + safezoneX,1.1775,0.0567187 * safezoneW,0.022 * safezoneH];
+					_cancelButton ctrlSetStructuredText parseText "Cancel";
+					_cancelButton ctrlAddEventHandler ["ButtonClick", {
+						params ["_control"];
+						private _display = ctrlParent _control;
+						_display closeDisplay 2;
+					}];
+					_cancelButton ctrlCommit 0;
+
+					private _confirmButton = MAZ_EP_settingsDialog ctrlCreate ["RscButtonMenu",-1];
+					_confirmButton ctrlSetPosition [0.546406 * safezoneW + safezoneX,1.1775,0.0567187 * safezoneW,0.022 * safezoneH];
+					_confirmButton ctrlSetStructuredText parseText "Confirm";
+					_confirmButton ctrlAddEventHandler ["ButtonClick", {
+						params ["_control"];
+						private _display = ctrlParent _control;
+						private _parentGroup = _display displayCtrl 110;
+						private _settings = _parentGroup getVariable ["MAZ_settingsCtrls",[]];
+						{
+							private _value = null;
+							switch (ctrlType _x) do {
+								case 6: {
+									comment "Toolbox";
+									_value = [false, true] select (lbCurSel _x);
+								};
+								case 43: {
+									comment "Slider";
+									_value = sliderPosition _x;
+								};
+							};
+							
+							[_forEachIndex,_x getVariable "MAZ_settingVarName",_value] call MAZ_EP_fnc_updateSetting;
+						}forEach _settings;
+
+						_display closeDisplay 1;
+					}];
+					_confirmButton ctrlCommit 0;
+
+					_yPos = _yPos + 0.04;
+					
+
+					private _contentYPos = (0.5 - (_yPos / 2));
+					private _buttonYPos = (0.5 + (_yPos / 2)) + 0.01;
+					_contentGroup ctrlSetPositionH _yPos;
+					_contentGroup ctrlSetPositionY _contentYPos;
+					_confirmButton ctrlSetPositionY _buttonYPos;
+					_cancelButton ctrlSetPositionY _buttonYPos;
+					_confirmButton ctrlCommit 0;
+					_cancelButton ctrlCommit 0;
+					_contentGroup ctrlCommit 0;
+				};
+			};
+
+			MAZ_EP_fnc_settingsStressTest = {
+				params [["_numOfTests",16]];
+				if(!canSuspend) exitWith {};
+				private _succCount = 0;
+				private _failCount = 0;
+				for "_i" from 1 to _numOfTests do {
+					["[CC] Combat Callouts","Whether to enable the Combat Callouts system.","MAZ_EP_CC_combatCalloutsEnabled",true,"TOGGLE",[],"MAZ_CC"] call MAZ_EP_fnc_addNewSetting;
+					["[CC] Call for Medic","Whether to enable calling for a medic when injured.","MAZ_EP_CC_callMedicToggle",true,"TOGGLE",[],"MAZ_CC"] call MAZ_EP_fnc_addNewSetting;
+					["[CC] Call Reload","Whether to enable calling out when you're reloading.","MAZ_EP_CC_callReloadToggle",true,"TOGGLE",[],"MAZ_CC"] call MAZ_EP_fnc_addNewSetting;
+					["[CC] Call Suppressed","Whether to enable calling out when you're being suppressed.","MAZ_EP_CC_callSuppressedToggle",true,"TOGGLE",[],"MAZ_CC"] call MAZ_EP_fnc_addNewSetting;
+					["[CC] Call Friendly Fire","Whether to enable calling out when you're being shot by friendlies.","MAZ_EP_CC_callFFToggle",true,"TOGGLE",[],"MAZ_CC"] call MAZ_EP_fnc_addNewSetting;
+					["[CC] Call Dead Squadmate","Whether to enable calling out when one of your group members dies.","MAZ_EP_CC_callDeadFriendlyToggle",true,"TOGGLE",[],"MAZ_CC"] call MAZ_EP_fnc_addNewSetting;
+					["[CC] Call Hit","Whether to enable calling out when you get hurt.","MAZ_EP_CC_callHurtToggle",true,"TOGGLE",[],"MAZ_CC"] call MAZ_EP_fnc_addNewSetting;
+					["[CC] Call Kill","Whether to enable calling out when you kill an enemy.","MAZ_EP_CC_callKillToggle",true,"TOGGLE",[],"MAZ_CC"] call MAZ_EP_fnc_addNewSetting;
+					["[CC] Call Direction","Whether to enable calling out the direction when you ping a location.","MAZ_EP_CC_callDirectionToggle",true,"TOGGLE",[],"MAZ_CC"] call MAZ_EP_fnc_addNewSetting;
+					["[CC] Call Grenade","Whether to enable calling out when a grenade is nearby.","MAZ_EP_CC_callNadeToggle",true,"TOGGLE",[],"MAZ_CC"] call MAZ_EP_fnc_addNewSetting;
+					["[CC] Call Throwing Grenade","Whether to enable calling out when you throw a grenade.","MAZ_EP_CC_callNadeThrowToggle",true,"TOGGLE",[],"MAZ_CC"] call MAZ_EP_fnc_addNewSetting;
+					private _timeToInit = time + 1;
+					waitUntil {
+						_set = ["MAZ_CC"] call MAZ_EP_fnc_getSettingsFromSettingsGroup;
+						(([_set] call MAZ_EP_fnc_isSettingsGroupInitiliazed) ||
+						time >= _timeToInit)
+					};
+					_settings = ["MAZ_CC"] call MAZ_EP_fnc_getSettingsFromSettingsGroup;
+					if([_settings] call MAZ_EP_fnc_isSettingsGroupInitiliazed) then {
+						_succCount = _succCount + 1;
+					} else {
+						systemChat "ERROR: System failed to initialize.";
+						_failCount = _failCount + 1;
+					};
+
+
+					MAZ_EP_CC_combatCalloutsEnabled = nil;
+					MAZ_EP_CC_callMedicToggle = nil;
+					MAZ_EP_CC_callReloadToggle = nil;
+					MAZ_EP_CC_callSuppressedToggle = nil;
+					MAZ_EP_CC_callFFToggle = nil;
+					MAZ_EP_CC_callDeadFriendlyToggle = nil;
+					MAZ_EP_CC_callHurtToggle = nil;
+					MAZ_EP_CC_callKillToggle = nil;
+					MAZ_EP_CC_callDirectionToggle = nil;
+					MAZ_EP_CC_callNadeToggle = nil;
+					MAZ_EP_CC_callNadeThrowToggle = nil;
+				};
+				systemChat format ["System failed %1 times. Succeeded %2 times.",_failCount,_succCount];
+			};
+
+		call MAZ_EP_fnc_initSettings;
 		call MAZ_EP_fnc_createBaseDiary;
 		["Core Pack","The Enhancement Pack Core adds the base functionality required for the rest of the EP. This adds the keybind framework and various other systems. To see all keybinds available, press CTRL + 0 (on your main keyboard)."] spawn MAZ_EP_fnc_addDiaryRecord;
 		
@@ -1282,6 +1934,12 @@ private _value = (str {
 		["Z.A.M. Server Enhancement Pack running!","addItemOk"] call MAZ_EP_fnc_systemMessage;
 		[] spawn MAZ_fnc_globalLaserMarkers;
 		[] spawn MAZ_fnc_addKeybinds;
+		[] spawn MAZ_fnc_removeTrollBackpacks;
+
+		enableSentences false;
+		enableRadio false;
+		disableMapIndicators [false, true, true, false];
+
 		if(isServer) then {
 			call MAZ_fnc_initDefaultAddonServer;
 		};

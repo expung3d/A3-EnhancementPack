@@ -26,18 +26,16 @@ if(missionNamespace getVariable ["MAZ_EP_increaseFuelUse",false]) exitWith {play
 private _varName = "MAZ_System_EnhancementPack_IFU";
 private _myJIPCode = "MAZ_EPSystem_IFU_JIP";
 
-MAZ_EP_increaseFuelUse = true;
-publicVariable 'MAZ_EP_increaseFuelUse';
-
-MAZ_fuelConsumptionRateGround = 2;
-publicVariable 'MAZ_fuelConsumptionRateGround';
-
-MAZ_fuelConsumptionRateAir = 6;
-publicVariable 'MAZ_fuelConsumptionRateAir';
+["Increased Fuel Burn","Whether to enable the Increased Fuel Burn system.","MAZ_EP_increaseFuelUse",true,"TOGGLE",[],"MAZ_IFB"] call MAZ_EP_fnc_addNewSetting;
+["Fuel Consumption Rate (Ground)","The rate at which ground vehicles burn fuel.\nMultiply the normal burn rate by this value.","MAZ_fuelConsumptionRateGround",2,"SLIDER",[1,4],"MAZ_IFB"] call MAZ_EP_fnc_addNewSetting;
+["Fuel Consumption Rate (Air)","The rate at which air vehicles burn fuel.\nMultiply the normal burn rate by this value.","MAZ_fuelConsumptionRateAir",6,"SLIDER",[1,10],"MAZ_IFB"] call MAZ_EP_fnc_addNewSetting;
 
 private _value = (str {
 	MAZ_increaseFuelConsumptionInit = {
+		private _settings = ["MAZ_IFB"] call MAZ_EP_fnc_getSettingsFromSettingsGroup;
+		waitUntil {uiSleep 0.1; [_settings] call MAZ_EP_fnc_isSettingsGroupInitiliazed;};
 		MAZ_increaseFuelConsumptionLoop = {
+			if(!MAZ_EP_increaseFuelUse) exitWith {};
 			private _veh = vehicle player;
 			if(_veh != player && isEngineOn _veh && driver _veh == player) then {
 				private _fuelCapacityMax = getNumber (configfile >> "CfgVehicles" >> typeOf _veh >> "fuelCapacity");
@@ -51,15 +49,17 @@ private _value = (str {
 			};
 		};
 
-		while {MAZ_EP_increaseFuelUse} do {
+		while {MAZ_EP_CoreEnabled} do {
 			[] spawn MAZ_increaseFuelConsumptionLoop;
 			sleep 1;
 		};
 	};
-	if(!isNil "MAZ_EP_fnc_addDiaryRecord") then {
+	[] spawn {
+		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_addDiaryRecord"};
 		["Increased Fuel Burn", "Vehicles will use much more fuel than before. This creates a need for land and air vehicles to return to base and refuel between missions."] call MAZ_EP_fnc_addDiaryRecord;
 	};
-	if(!isNil "MAZ_EP_fnc_createNotification") then {
+	[] spawn {
+		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_createNotification"};
 		[
 			"Increased Fuel Burn System has been loaded! In this economy?!",
 			"System Initialization Notification"
