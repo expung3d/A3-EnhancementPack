@@ -50,7 +50,7 @@ private _value = (str {
 				private _display = if(_zeusKeybind) then {findDisplay 312} else {findDisplay 46};
 				private _savedKey = [_keySave] call MAZ_fnc_getKeybindData;
 				if !(_savedKey isEqualTo []) then {
-					_savedKey params ["_key","_mod"]
+					_savedKey params ["_key","_mod"];
 					_keyCode = _key;
 					_modifiers = _mod;
 				};
@@ -107,9 +107,9 @@ private _value = (str {
 				if(_keyIndex == -1) then {
 					_savedKeys pushBack [_name,[_key,_mod]];
 				} else {
-					_savedKey set [_keyIndex,[_name,[_key,_mod]]];
+					_savedKeys set [_keyIndex,[_name,[_key,_mod]]];
 				};
-				profileNamespace setVariable ["MAZ_SavedKeybinds",_savedKey];
+				profileNamespace setVariable ["MAZ_SavedKeybinds",_savedKeys];
 				saveProfileNamespace;
 			};
 
@@ -117,7 +117,7 @@ private _value = (str {
 				params ["_index","_newKeyCode","_modifierDataNew"];
 				private _KeybindData = MAZ_KeybindData select _index;
 				_KeybindData params ["_displayName","_description","_display","_keyCode","_code","_modifierData","_override","_keySave"];
-				if(_keyCode != _newKeyCode) then {
+				if(_keyCode != _newKeyCode || !(_modifierData isEqualTo _modifierDataNew)) then {
 					MAZ_KeybindData set [_index,[_displayName,_description,_display,_newKeyCode,_code,_modifierDataNew,_override,_keySave]];
 					[_keySave,_newKeyCode,_modifierDataNew] call MAZ_fnc_saveKeybind;
 				};
