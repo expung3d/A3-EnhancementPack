@@ -48,8 +48,10 @@ private _value = (str {
 		};
 		MAZ_FFP_DEH_KeyDown_ForceFirstPerson = (findDisplay 46) displayAddEventHandler ["KeyDown", {
 			params ["_display","_key"];
+			if !(_key in (actionKeys "personView")) exitWith {};
 			private _return = false;
-			if(_key in (actionKeys "personView") && !(call MAZ_FFP_fnc_canEnter3PP)) then {
+			if(cameraView != "External" && {!(call MAZ_FFP_fnc_canEnter3PP)}) then {
+				systemChat "Interrupt";
 				_return = true;
 			};
 			_return
@@ -87,7 +89,7 @@ private _value = (str {
 			"System Initialization Notification"
 		] spawn MAZ_EP_fnc_createNotification;
 	};
-	call MAZ_fnc_forceFirstPersonCarrier;
+	[] spawn MAZ_fnc_forceFirstPersonCarrier;
 }) splitString "";
 
 _value deleteAt (count _value - 1);
