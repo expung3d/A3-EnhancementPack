@@ -51,7 +51,6 @@ private _value = (str {
 			if !(_key in (actionKeys "personView")) exitWith {};
 			private _return = false;
 			if(cameraView != "External" && {!(call MAZ_FFP_fnc_canEnter3PP)}) then {
-				systemChat "Interrupt";
 				_return = true;
 			};
 			_return
