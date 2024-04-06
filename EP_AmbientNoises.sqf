@@ -297,6 +297,7 @@ private _value = (str {
 	[] spawn {
 		waitUntil {uisleep 0.1;!isNull (findDisplay 46) && alive player};
 		sleep 0.1;
+		waitUntil {uiSleep 0.1;missionNamespace getVariable ["MAZ_EP_SettingsLoaded",false]};
 		private _settings = ["MAZ_AN"] call MAZ_EP_fnc_getSettingsFromSettingsGroup;
 		waitUntil {uiSleep 0.1; [_settings] call MAZ_EP_fnc_isSettingsGroupInitiliazed;};
 

@@ -30,6 +30,7 @@ private _myJIPCode = "MAZ_EPSystem_SUP_JIP";
 
 private _value = (str {
 	MAZ_EP_fnc_suppressionCarrier = {
+		waitUntil {uiSleep 0.1;missionNamespace getVariable ["MAZ_EP_SettingsLoaded",false]};
 		private _settings = ["MAZ_SUP"] call MAZ_EP_fnc_getSettingsFromSettingsGroup;
 		waitUntil {uiSleep 0.1; [_settings] call MAZ_EP_fnc_isSettingsGroupInitiliazed;};
 		if(!isNil "MAZ_EH_suppression") then {

@@ -31,6 +31,7 @@ private _myJIPCode = "MAZ_EPSystem_ENV_JIP";
 
 private _value = (str {
 	MAZ_EP_fnc_enhancedNightVisionCarrier = {
+		waitUntil {uiSleep 0.1;missionNamespace getVariable ["MAZ_EP_SettingsLoaded",false]};
 		private _settings = ["MAZ_ENV"] call MAZ_EP_fnc_getSettingsFromSettingsGroup;
 		waitUntil {uiSleep 0.1; [_settings] call MAZ_EP_fnc_isSettingsGroupInitiliazed;};
 		MAZ_ENV_whitelistedNVGOptics = [

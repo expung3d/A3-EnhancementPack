@@ -44,6 +44,7 @@ private _value = (str {
 	MAZ_EP_CC_delayToCallReload = 5;
 	
 	MAZ_CC_fnc_combatCalloutsCarrier = {
+		waitUntil {uiSleep 0.1;missionNamespace getVariable ["MAZ_EP_SettingsLoaded",false]};
 		private _settings = ["MAZ_CC"] call MAZ_EP_fnc_getSettingsFromSettingsGroup;
 		waitUntil {uiSleep 0.1; [_settings] call MAZ_EP_fnc_isSettingsGroupInitiliazed;};
 		MAZ_autoCallMedic = {

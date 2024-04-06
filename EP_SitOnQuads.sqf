@@ -30,6 +30,7 @@ private _myJIPCode = "MAZ_EPSystem_SOQ_JIP";
 
 private _value = (str {
 	MAZ_EP_fnc_quadbikesCarrier = {
+		waitUntil {uiSleep 0.1;missionNamespace getVariable ["MAZ_EP_SettingsLoaded",false]};
 		private _settings = ["MAZ_SOQ"] call MAZ_EP_fnc_getSettingsFromSettingsGroup;
 		waitUntil {uiSleep 0.1; [_settings] call MAZ_EP_fnc_isSettingsGroupInitiliazed;};
 		MAZ_fnc_quadbikeServerLoop = {

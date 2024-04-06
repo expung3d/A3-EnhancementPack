@@ -38,6 +38,7 @@ private _value = (str {
 	publicVariable "MAZ_anchorPoints";
 
 	MAZ_EP_fnc_boatAnchorsCarrier = {
+		waitUntil {uiSleep 0.1;missionNamespace getVariable ["MAZ_EP_SettingsLoaded",false]};
 		private _settings = ["MAZ_BA"] call MAZ_EP_fnc_getSettingsFromSettingsGroup;
 		waitUntil {uiSleep 0.1; [_settings] call MAZ_EP_fnc_isSettingsGroupInitiliazed;};
 		MAZ_fnc_boatAnchorServerLoop = {

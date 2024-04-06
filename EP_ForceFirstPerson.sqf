@@ -32,6 +32,7 @@ private _myJIPCode = "MAZ_EPSystem_1PP_JIP";
 
 private _value = (str {
 	MAZ_fnc_forceFirstPersonCarrier = {
+		waitUntil {uiSleep 0.1;missionNamespace getVariable ["MAZ_EP_SettingsLoaded",false]};
 		private _settings = ["MAZ_FFP"] call MAZ_EP_fnc_getSettingsFromSettingsGroup;
 		waitUntil {uiSleep 0.1; [_settings] call MAZ_EP_fnc_isSettingsGroupInitiliazed;};
 		MAZ_FFP_fnc_canEnter3PP = {

@@ -32,6 +32,7 @@ private _myJIPCode = "MAZ_EPSystem_ER_JIP";
 
 private _value = (str {
 	MAZ_fnc_enhancedRadioCarrier = {
+		waitUntil {uiSleep 0.1;missionNamespace getVariable ["MAZ_EP_SettingsLoaded",false]};
 		private _settings = ["MAZ_ER"] call MAZ_EP_fnc_getSettingsFromSettingsGroup;
 		waitUntil {uiSleep 0.1; [_settings] call MAZ_EP_fnc_isSettingsGroupInitiliazed;};
 		MAZ_fnc_radioIn = {
@@ -186,7 +187,7 @@ private _value = (str {
 				[] spawn MAZ_fnc_radioOut;
 			};
 		"];
-		[] spawn MAZ_radioRequirement;
+		[] spawn MAZ_fnc_radioRequirement;
 	};
 	[] spawn {
 		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_addDiaryRecord"};

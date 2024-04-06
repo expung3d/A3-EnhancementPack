@@ -1608,7 +1608,7 @@ private _value = (str {
 					private _savedVar = [_variableName,_value] call MAZ_EP_fnc_getSavedSettingFromProfile;
 					_this set [3,_savedVar];
 					[_this,{
-						_this call MAZ_EP_fnc_addNewSetting;
+						[_this,MAZ_EP_fnc_addNewSetting] call MAZ_EP_fnc_addToExecQueue;
 					}] remoteExec ['spawn',2];
 					"Ran on server";
 				};
@@ -1707,6 +1707,7 @@ private _value = (str {
 					_x params ["","","_varName","_value","",""];
 					missionNamespace setVariable [_varName,_value];
 				}forEach MAZ_EP_Settings;
+				MAZ_EP_SettingsLoaded = true;
 			};
 
 			MAZ_EP_fnc_editSettings = {
