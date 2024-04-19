@@ -1933,4 +1933,4 @@ missionNamespace setVariable [_varName,_value,true];
 	["Auto HALO Altitude","The altitude at which players will be automatically equipped with a parachute.","MAZ_EP_autoHALOHeight",1000,"SLIDER",[300,2000]] call MAZ_EP_fnc_addNewSetting;
 };
 
-comment "Add faster swimming";
+comment "Add faster swimming ";
