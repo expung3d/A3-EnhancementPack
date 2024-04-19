@@ -31,8 +31,11 @@ if(missionNamespace getVariable ["MAZ_AE_aircraftEnhancementEnable",false]) exit
 private _varName = "MAZ_System_EnhancementPack_AE";
 private _myJIPCode = "MAZ_EPSystem_AE_JIP";
 
-["[AE] Aircraft Enhancements","Whether to enable the Aircraft Enhancements system.\nDisabling this mid-game will keep the systems running on aircraft already spawned.","MAZ_AE_aircraftEnhancementEnable",true,"TOGGLE",[],"MAZ_AE"] call MAZ_EP_fnc_addNewSetting;
-["[AE] Collision Lights","Whether to add new, brighter collision lights to aircraft.\nVery buggy and experimental.","MAZ_AE_NewLights",false,"TOGGLE",[],"MAZ_AE"] call MAZ_EP_fnc_addNewSetting;
+[] spawn {
+	waitUntil {!isNil "MAZ_EP_fnc_addNewSetting"};
+	["[AE] Aircraft Enhancements","Whether to enable the Aircraft Enhancements system.\nDisabling this mid-game will keep the systems running on aircraft already spawned.","MAZ_AE_aircraftEnhancementEnable",true,"TOGGLE",[],"MAZ_AE"] call MAZ_EP_fnc_addNewSetting;
+	["[AE] Collision Lights","Whether to add new, brighter collision lights to aircraft.\nVery buggy and experimental.","MAZ_AE_NewLights",false,"TOGGLE",[],"MAZ_AE"] call MAZ_EP_fnc_addNewSetting;
+};
 
 private _value = (str {
 	

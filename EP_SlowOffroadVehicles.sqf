@@ -26,8 +26,11 @@ if(missionNamespace getVariable ["MAZ_EP_slowOffroadVehiclesEnabled",false]) exi
 private _varName = "MAZ_System_EnhancementPack_SOV";
 private _myJIPCode = "MAZ_EPSystem_SOV_JIP";
 
-["Slow Offroad Vehicles","Whether to enable the Slow Offroad Vehicles system.","MAZ_EP_slowOffroadVehiclesEnabled",true,"TOGGLE",[],"MAZ_SOV"] call MAZ_EP_fnc_addNewSetting;
-["Max Offroad Speed","The maximum speed vehicles can go while offroad.","MAZ_EP_maxVehicleOffroadSpeed",47,"SLIDER",[30,70],"MAZ_SOV"] call MAZ_EP_fnc_addNewSetting;
+[] spawn {
+	waitUntil {!isNil "MAZ_EP_fnc_addNewSetting"};
+	["Slow Offroad Vehicles","Whether to enable the Slow Offroad Vehicles system.","MAZ_EP_slowOffroadVehiclesEnabled",true,"TOGGLE",[],"MAZ_SOV"] call MAZ_EP_fnc_addNewSetting;
+	["Max Offroad Speed","The maximum speed vehicles can go while offroad.","MAZ_EP_maxVehicleOffroadSpeed",47,"SLIDER",[30,70],"MAZ_SOV"] call MAZ_EP_fnc_addNewSetting;
+};
 
 private _value = (str {
 	MAZ_slowOffroadVehicleCarrier = {

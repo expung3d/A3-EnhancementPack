@@ -26,7 +26,10 @@ if(missionNamespace getVariable ["MAZ_EP_suppressionEnabled",false]) exitWith {p
 private _varName = "MAZ_System_EnhancementPack_SUP";
 private _myJIPCode = "MAZ_EPSystem_SUP_JIP";
 
-["Suppression","Whether to enable the Suppression system.","MAZ_EP_suppressionEnabled",true,"TOGGLE",[],"MAZ_SUP"] call MAZ_EP_fnc_addNewSetting;
+[] spawn {
+	waitUntil {!isNil "MAZ_EP_fnc_addNewSetting"};
+	["Suppression","Whether to enable the Suppression system.","MAZ_EP_suppressionEnabled",true,"TOGGLE",[],"MAZ_SUP"] call MAZ_EP_fnc_addNewSetting;
+};
 
 private _value = (str {
 	MAZ_EP_fnc_suppressionCarrier = {

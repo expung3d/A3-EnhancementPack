@@ -26,9 +26,12 @@ if(missionNamespace getVariable ["MAZ_EP_enhancedRadioEnabled",false]) exitWith 
 private _varName = "MAZ_System_EnhancementPack_ER";
 private _myJIPCode = "MAZ_EPSystem_ER_JIP";
 
-["[ER] Enhanced Radio","Whether to enable the Enhanced Radio system.","MAZ_EP_enhancedRadioEnabled",true,"TOGGLE",[],"MAZ_ER"] call MAZ_EP_fnc_addNewSetting;
-["[ER] Radio Only for Squad Leader","Whether to limit GLOBAL, SIDE, and COMMAND to Squad Leaders.","MAZ_EP_enhancedRadioLeaderOnly",true,"TOGGLE",[],"MAZ_ER"] call MAZ_EP_fnc_addNewSetting;
-["[ER] Radio Animation","Whether to play an animation when using GLOBAL, SIDE, and COMMAND.","MAZ_EP_enhancedRadioAnim",true,"TOGGLE",[],"MAZ_ER"] call MAZ_EP_fnc_addNewSetting;
+[] spawn {
+	waitUntil {!isNil "MAZ_EP_fnc_addNewSetting"};
+	["[ER] Enhanced Radio","Whether to enable the Enhanced Radio system.","MAZ_EP_enhancedRadioEnabled",true,"TOGGLE",[],"MAZ_ER"] call MAZ_EP_fnc_addNewSetting;
+	["[ER] Radio Only for Squad Leader","Whether to limit GLOBAL, SIDE, and COMMAND to Squad Leaders.","MAZ_EP_enhancedRadioLeaderOnly",true,"TOGGLE",[],"MAZ_ER"] call MAZ_EP_fnc_addNewSetting;
+	["[ER] Radio Animation","Whether to play an animation when using GLOBAL, SIDE, and COMMAND.","MAZ_EP_enhancedRadioAnim",true,"TOGGLE",[],"MAZ_ER"] call MAZ_EP_fnc_addNewSetting;
+};
 
 private _value = (str {
 	MAZ_fnc_enhancedRadioCarrier = {

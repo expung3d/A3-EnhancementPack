@@ -26,8 +26,11 @@ if(missionNamespace getVariable ["MAZ_EP_enhancedNightVisionEnabled",false]) exi
 private _varName = "MAZ_System_EnhancementPack_ENV";
 private _myJIPCode = "MAZ_EPSystem_ENV_JIP";
 
-["[ENV] Enhanced Night Vision","Whether to enable the Enhanced Night Vision system.","MAZ_EP_enhancedNightVisionEnabled",true,"TOGGLE",[],"MAZ_ENV"] call MAZ_EP_fnc_addNewSetting;
-["[ENV] 3PP in Vehicles","Whether to allow players to use 3rd person in vehicles with night vision.","MAZ_ENV_allowThirdPersonVehicles",true,"TOGGLE",[],"MAZ_ENV"] call MAZ_EP_fnc_addNewSetting;
+[] spawn {
+	waitUntil {!isNil "MAZ_EP_fnc_addNewSetting"};
+	["[ENV] Enhanced Night Vision","Whether to enable the Enhanced Night Vision system.","MAZ_EP_enhancedNightVisionEnabled",true,"TOGGLE",[],"MAZ_ENV"] call MAZ_EP_fnc_addNewSetting;
+	["[ENV] 3PP in Vehicles","Whether to allow players to use 3rd person in vehicles with night vision.","MAZ_ENV_allowThirdPersonVehicles",true,"TOGGLE",[],"MAZ_ENV"] call MAZ_EP_fnc_addNewSetting;
+};
 
 private _value = (str {
 	MAZ_EP_fnc_enhancedNightVisionCarrier = {

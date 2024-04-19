@@ -26,7 +26,10 @@ if(missionNamespace getVariable ["MAZ_EP_boatAnchors",false]) exitWith {playSoun
 private _varName = "MAZ_System_EnhancementPack_BA";
 private _myJIPCode = "MAZ_EPSystem_BA_JIP";
 
-["Boat Anchors","Whether to enable the Boat Anchors system.","MAZ_EP_boatAnchors",true,"TOGGLE",[],"MAZ_BA"] call MAZ_EP_fnc_addNewSetting;
+[] spawn {
+	waitUntil {!isNil "MAZ_EP_fnc_addNewSetting"};
+	["Boat Anchors","Whether to enable the Boat Anchors system.","MAZ_EP_boatAnchors",true,"TOGGLE",[],"MAZ_BA"] call MAZ_EP_fnc_addNewSetting;
+};
 
 private _value = (str {
 	MAZ_anchorPoints = [

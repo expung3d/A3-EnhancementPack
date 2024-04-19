@@ -26,14 +26,17 @@ if(missionNamespace getVariable ["MAZ_ambientNoisesToggle",false]) exitWith {pla
 private _varName = "MAZ_System_EnhancementPack_AN";
 private _myJIPCode = "MAZ_EPSystem_AN_JIP";
 
-["[AN] Ambient Noises","Whether to enable the Ambient Noises system.","MAZ_ambientNoisesToggle",true,"TOGGLE",[],"MAZ_AN"] call MAZ_EP_fnc_addNewSetting;
-["[AN] Dog Barking","Whether to have dog barking be heard when players are in towns.","MAZ_AN_dogBarking",true,"TOGGLE",[],"MAZ_AN"] call MAZ_EP_fnc_addNewSetting;
-["[AN] Tree Creaking","Whether to have trees creak when players are walking in forests.","MAZ_AN_treeCreaks",true,"TOGGLE",[],"MAZ_AN"] call MAZ_EP_fnc_addNewSetting;
-["[AN] Frog Croaks","Whether to have frogs croak when players are in swamps.\nThe only swamp is on Altis.","MAZ_AN_frogCroaks",true,"TOGGLE",[],"MAZ_AN"] call MAZ_EP_fnc_addNewSetting;
-["[AN] Gas Mask Sounds","Whether to have players wearing gas masks make gas mask breathing noises.","MAZ_AN_gasMaskSounds",true,"TOGGLE",[],"MAZ_AN"] call MAZ_EP_fnc_addNewSetting;
-["[AN] Gas Mask Overlay","Whether to have players wearing gas masks have an overlay of a gas mask when in first person.","MAZ_AN_gasMaskOverlay",true,"TOGGLE",[],"MAZ_AN"] call MAZ_EP_fnc_addNewSetting;
-["[AN] Roosters","Whether to have roosters make noise during sunrise.","MAZ_AN_roosters",true,"TOGGLE",[],"MAZ_AN"] call MAZ_EP_fnc_addNewSetting;
-["[AN] Scared Birds","Whether to have birds fly away from players when they shoot within a forest with unsuppressed guns.","MAZ_AN_scaredBirds",true,"TOGGLE",[],"MAZ_AN"] call MAZ_EP_fnc_addNewSetting;
+[] spawn {
+	waitUntil {!isNil "MAZ_EP_fnc_addNewSetting"};
+	["[AN] Ambient Noises","Whether to enable the Ambient Noises system.","MAZ_ambientNoisesToggle",true,"TOGGLE",[],"MAZ_AN"] call MAZ_EP_fnc_addNewSetting;
+	["[AN] Dog Barking","Whether to have dog barking be heard when players are in towns.","MAZ_AN_dogBarking",true,"TOGGLE",[],"MAZ_AN"] call MAZ_EP_fnc_addNewSetting;
+	["[AN] Tree Creaking","Whether to have trees creak when players are walking in forests.","MAZ_AN_treeCreaks",true,"TOGGLE",[],"MAZ_AN"] call MAZ_EP_fnc_addNewSetting;
+	["[AN] Frog Croaks","Whether to have frogs croak when players are in swamps.\nThe only swamp is on Altis.","MAZ_AN_frogCroaks",true,"TOGGLE",[],"MAZ_AN"] call MAZ_EP_fnc_addNewSetting;
+	["[AN] Gas Mask Sounds","Whether to have players wearing gas masks make gas mask breathing noises.","MAZ_AN_gasMaskSounds",true,"TOGGLE",[],"MAZ_AN"] call MAZ_EP_fnc_addNewSetting;
+	["[AN] Gas Mask Overlay","Whether to have players wearing gas masks have an overlay of a gas mask when in first person.","MAZ_AN_gasMaskOverlay",true,"TOGGLE",[],"MAZ_AN"] call MAZ_EP_fnc_addNewSetting;
+	["[AN] Roosters","Whether to have roosters make noise during sunrise.","MAZ_AN_roosters",true,"TOGGLE",[],"MAZ_AN"] call MAZ_EP_fnc_addNewSetting;
+	["[AN] Scared Birds","Whether to have birds fly away from players when they shoot within a forest with unsuppressed guns.","MAZ_AN_scaredBirds",true,"TOGGLE",[],"MAZ_AN"] call MAZ_EP_fnc_addNewSetting;
+};
 
 private _value = (str {
 	MAZ_AN_fnc_ambientNoisesMainLoop = {

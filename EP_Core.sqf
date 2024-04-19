@@ -16,7 +16,7 @@ if(missionNamespace getVariable ["MAZ_EP_CoreEnabled",false]) exitWith {
 		] call BIS_fnc_guiMessage;
 		showChat true;
 		if (_result) then {
-			call MAZ_EP_fnc_editSettings;
+			isNil {call MAZ_EP_fnc_editSettings};
 		};
 	};
 };
@@ -32,9 +32,6 @@ publicVariable "MAZ_globalLaserMarkers";
 
 MAZ_EP_CoreEnabled = true;
 publicVariable "MAZ_EP_CoreEnabled";
-
-MAZ_EP_Settings = [];
-publicVariable "MAZ_EP_Settings";
 
 private _value = (str {
 	if(isNil "MAZ_keyAr" && isNil "MAZ_fnc_keybindCarrier") then {
@@ -574,6 +571,19 @@ private _value = (str {
 			};
 		};
 
+		MAZ_fnc_assignSavedViewDistance = {
+			private _distance = profileNamespace getVariable ["MAZ_defaultViewDistance",1600];
+			setViewDistance _distance;
+		};
+
+		MAZ_fnc_setViewDistance = {
+			params ["_distance"];
+			profileNamespace setVariable ["MAZ_defaultViewDistance",_distance];
+			saveProfileNamespace;
+			setViewDistance _distance;
+		};
+
+		comment "TODO : UPDATE UI, VERY UGLY";
 		MAZ_fnc_liteViewDistanceMenu = {
 			MAZ_currentViewDistance = viewDistance;
 			with uiNamespace do {
@@ -606,7 +616,7 @@ private _value = (str {
 				viewDistButton ctrlSetPosition [0.448438 * safezoneW + safezoneX,0.511 * safezoneH + safezoneY,0.103125 * safezoneW,0.022 * safezoneH];
 				viewDistButton ctrlAddEventHandler ["ButtonClick",{
 					private _newDistance = parseNumber (ctrlText (uiNamespace getVariable 'viewDistEdit'));
-					setViewDistance _newDistance;
+					[_newDistance] call MAZ_fnc_setViewDistance;
 					with uiNamespace do {viewDistLite closeDisplay 0;};
 				}];
 				viewDistButton ctrlCommit 0;
@@ -625,7 +635,7 @@ private _value = (str {
 				repackButton = (findDisplay 602) ctrlCreate ["RscButtonMenu", 1600];
 				repackButton ctrlSetBackgroundColor [0,0,0,0.6];
 				repackButton ctrlSetPosition [0.433069 * safezoneW + safezoneX,0.7545 * safezoneH + safezoneY,0.3025 * safezoneW,0.027 * safezoneH];
-				repackButton ctrlSetEventHandler ["ButtonClick","[] spawn MAZ_fnc_newRepack;"];
+				repackButton ctrlSetEventHandler ["ButtonClick","[] spawn MAZ_fnc_repackMagazines;"];
 				repackButton ctrlSetStructuredText parseText "<t size='0.05'>&#160;</t><br/><t align='center' size='1.01'>Repack Magazines</t>";
 				repackButton ctrlSetFont "PuristaSemiBold";
 				repackButton ctrlCommit 0;
@@ -633,120 +643,68 @@ private _value = (str {
 			showChat true;
 		};
 
-		MAZ_fnc_newRepack = {
-			_mags = magazinesAmmoFull player;
-			_primWep = primaryWeapon player;
-			_primWepCompatMags = [_primWep] call BIS_fnc_compatibleMagazines;
-			_secWep = handgunWeapon player;
-			_secWepCompatMags = [_secWep] call BIS_fnc_compatibleMagazines;
-			_totalPrimAmmo = 0;
-			_magPrimArray = [];
-			_ammoPrimArray = [];
-			_locPrimArray = [];
-			_totalSecAmmo = 0;
-			_magSecArray = [];
-			_ammoSecArray = [];
-			_locSecArray = [];
-			_maxPrim = 0;
-			_maxSec = 0;
-			_glRounds = [
-				'1rnd_he_grenade_shell',
-				'3rnd_he_grenade_shell',
-				'1rnd_smoke_grenade_shell',
-				'3rnd_smoke_grenade_shell',
-				'1rnd_smokered_grenade_shell',
-				'3rnd_smokered_grenade_shell',
-				'1rnd_smokegreen_grenade_shell',
-				'3rnd_smokegreen_grenade_shell',
-				'1rnd_smokeyellow_grenade_shell',
-				'3rnd_smokeyellow_grenade_shell',
-				'1rnd_smokepurple_grenade_shell',
-				'3rnd_smokepurple_grenade_shell',
-				'1rnd_smokeblue_grenade_shell',
-				'3rnd_smokeblue_grenade_shell',
-				'1rnd_smokeorange_grenade_shell',
-				'3rnd_smokeorange_grenade_shell'
-			];
+		MAZ_fnc_repackMagazines = {
+			private _allMags = magazinesAmmoFull player;
+			private _primWep = primaryWeapon player;
+			private _primWepCompatMags = [_primWep] call BIS_fnc_compatibleMagazines;
+			private _secWep = handgunWeapon player;
+			private _secWepCompatMags = [_secWep] call BIS_fnc_compatibleMagazines;
 
+			private _ammoCountPrimary = 0;
+			private _ammoCountSecondary = 0;
+			private _primaryMagazines = [];
+			private _secondaryMagazines = [];
+			private _fullMagTimeReduction = 0;
 			{
-				_magClass = (_x select 0);
-				_magAmmo = (_x select 1);
-				_magType = (_x select 3);
-				_magLoc = (_x select 4);
-
-				if(_magType == -1) then {
-					if ((toLower _magClass) in _primWepCompatMags && !((toLower _magClass) in _glRounds)) then {
-						_magPrimArray pushback _magClass;
-						_ammoPrimArray pushback _magAmmo;
-						_locPrimArray pushback _magLoc;
-						player setVariable ["PrimMag",_magClass];
-						_maxPrim = getNumber (configfile >> "CfgMagazines" >> _magClass >> "count");
-					};
-					if ((toLower _magClass) in _secWepCompatMags) then {
-						_secMagClass = _magClass;
-						_magSecArray pushback _magClass;
-						_ammoSecArray pushback _magAmmo;
-						_locSecArray pushback _magLoc;
-						
-						player setVariable ["SecMag",_secMagClass];
-						_maxSec = getNumber (configfile >> "CfgMagazines" >> _magClass >> "count");
-					};
+				_x params ["_magClass","_magAmmo","_loaded","_magType","_magLoc"];
+				_magClass = toLower _magClass;
+				if("grenade" in _magClass) then {continue};
+				if("shell" in _magClass) then {continue};
+				if(_magType != -1) then {continue};
+				private _maxMagCapacity = getNumber (configfile >> "CfgMagazines" >> _magClass >> "count");
+				if(_magAmmo == _maxMagCapacity) then {
+					_fullMagTimeReduction = _fullMagTimeReduction + _magAmmo;
 				};
-			} forEach _mags;
+				if(_magClass in _primWepCompatMags) then {
+					_ammoCountPrimary = _ammoCountPrimary + _magAmmo;
+					_primaryMagazines pushBack [_magClass,_maxMagCapacity,_magLoc];
+				};
+				if(_magClass in _secWepCompatMags) then {
+					_ammoCountSecondary = _ammoCountSecondary + _magAmmo;
+					_secondaryMagazines pushBack [_magClass,_maxMagCapacity,_magLoc];
+				};
+			}forEach _allMags;
 
-			comment "Finds total amount of ammo.";
+			_primaryMagazines = [_primaryMagazines,[],{_x select 1},"DESCEND"] call BIS_fnc_sortBy; 
+			_secondaryMagazines = [_secondaryMagazines,[],{_x select 1},"DESCEND"] call BIS_fnc_sortBy; 
 			{
-				_totalPrimAmmo = _totalPrimAmmo + (_x);
-			} forEach _ammoPrimArray;
-			{
-				_totalSecAmmo = _totalSecAmmo + (_x);
-			} forEach _ammoSecArray;
-
-			comment "Removes magazines";
-			{
-				player removeMagazine _x;
-			} forEach _magPrimArray;
-			{
-				player removeMagazine _x;
-			} forEach _magSecArray;
-			sleep 0.1;
-
-			comment "Adds magazines back to player with proper amounts";
-			_primMagType = player getVariable "PrimMag";
-			_secMagType = player getVariable "SecMag";
+				player removeMagazine (_x select 0);
+			}forEach (_primaryMagazines + _secondaryMagazines);
 			
-			comment "Loading bar";
-			_timeForBar = 0;
-			_primAmmoTime = 0;
-			_secAmmoTime = 0;
-			if(_maxSec != 0) then {
-				_secAmmoTime = (_totalSecAmmo / _maxSec);
-			};
-			if(_maxPrim != 0) then {
-				_primAmmoTime = (_totalPrimAmmo / _maxPrim);
-			};
-			_timeForBar = (_primAmmoTime + _secAmmoTime - 1);
-			[_timeForBar] spawn MAZ_fnc_repackLoadingBar;
+			private _timeToLoad = (_ammoCountPrimary + _ammoCountSecondary - _fullMagTimeReduction) * 0.25;
+			private _magIndex = 0;
+			while {_ammoCountPrimary > 0 && _magIndex < (count _primaryMagazines)} do {
+				private _mag = _primaryMagazines select _magIndex;
+				_mag params ["_type","_max"];
+				private _bullets = if(_ammoCountPrimary < _max) then {_ammoCountPrimary} else {_max};
+				player addMagazine [_type, _bullets];
 
-			while {_maxPrim < _totalPrimAmmo} do {
-				player addMagazine [_primMagType, _maxPrim];
-				_totalPrimAmmo = _totalPrimAmmo - _maxPrim;
-				sleep 1;
+				_ammoCountPrimary = _ammoCountPrimary - _bullets;
+				_magIndex = _magIndex + 1;
 			};
-			if (_totalPrimAmmo <= _maxPrim) then {
-				if(_totalPrimAmmo > 0) then {
-					player addMagazine [_primMagType, _totalPrimAmmo];
-				};
+			_magIndex = 0;
+			while {_ammoCountSecondary > 0 && _magIndex < (count _secondaryMagazines)} do {
+				private _mag = _secondaryMagazines select _magIndex;
+				_mag params ["_type","_max"];
+				private _bullets = if(_ammoCountSecondary < _max) then {_ammoCountSecondary} else {_max};
+				player addMagazine [_type, _bullets];
+
+				_ammoCountSecondary = _ammoCountSecondary - _bullets;
+				_magIndex = _magIndex + 1;
 			};
-			while {_maxSec < _totalSecAmmo} do {
-				player addMagazine [_secMagType, _maxSec];
-				_totalSecAmmo = _totalSecAmmo - _maxSec;
-				sleep 1;
-			};
-			if (_totalSecAmmo <= _maxSec) then {
-				if(_totalSecAmmo > 0) then {
-					player addMagazine [_secMagType, _totalSecAmmo];
-				};
+
+			if(_timeToLoad > 0) then {
+				[_timeToLoad] spawn MAZ_fnc_repackLoadingBar;
 			};
 		};
 
@@ -788,7 +746,7 @@ private _value = (str {
 				
 			};
 
-			magsRepackDone = false;
+			MAZ_magRepackDone = false;
 			[] spawn MAZ_fnc_repackAnimation;
 
 			with uiNamespace do {
@@ -796,6 +754,9 @@ private _value = (str {
 				progressBarForeground ctrlCommit _amountOfMags;
 				
 				uiSleep _amountOfMags;
+
+				missionNamespace setVariable ["MAZ_magRepackDone",true];
+				player playActionNow "stop";
 
 				progressBarText ctrlSetStructuredText parseText "<t align='center'>Magazines Repacked.</t>";
 				progressBarText ctrlCommit 0;
@@ -820,12 +781,10 @@ private _value = (str {
 				ctrlDelete progressBarForeground;
 				ctrlDelete progressBarText;
 			};
-			magsRepackDone = true;
-			player playActionNow "stop";
 		};
 
 		MAZ_fnc_repackAnimation = {
-			while {magsRepackDone == false} do {
+			while {!MAZ_magRepackDone && vehicle player == player} do {
 				player playMoveNow "AinvPknlMstpSnonWnonDnon_medic_1";
 				sleep 5;
 			};
@@ -857,7 +816,7 @@ private _value = (str {
 		};
 
 		MAZ_fnc_autoHALO = {
-			if(((getPosATL player) select 2) >= 1500 && backpack player != "B_Parachute") then {
+			if(((getPosATL player) select 2) >= MAZ_EP_autoHALOHeight && backpack player != "B_Parachute") then {
 				if(backpack player != "") then {
 					private _backPack = backpack player;
 					private _backPackItems = backpackItems player;
@@ -1046,6 +1005,7 @@ private _value = (str {
 			waitUntil {uisleep 0.1;!isNull (findDisplay 46) && alive player};
 			sleep 0.1;
 			waitUntil {!isNil "MAZ_fnc_newKeybind"};
+			call MAZ_fnc_assignSavedViewDistance;
 			if(!isNil "MAZ_DEH_KeyDown_Earplugs") then {
 				(findDisplay 46) displayRemoveEventHandler ["KeyDown",MAZ_DEH_KeyDown_Earplugs];
 			};
@@ -1153,10 +1113,12 @@ private _value = (str {
 		MAZ_fnc_removeTrollBackpacks = {
 			while {MAZ_EP_CoreEnabled} do {
 				comment "Prevent pistol whippers";
-				if(currentWeapon player == handgunWeapon player && weaponLowered player && stance player == "CROUCH") then {
-					player setAnimSpeedCoef 0.8;
-				} else {
-					player setAnimSpeedCoef 1;
+				if(!(missionNamespace getVariable ["MAZ_BetterSprint",false])) then {
+					if(currentWeapon player == handgunWeapon player && weaponLowered player && stance player == "CROUCH") then {
+						player setAnimSpeedCoef 0.8;
+					} else {
+						player setAnimSpeedCoef 1;
+					};
 				};
 
 				comment "Prevent respawn bags and turrets";
@@ -1190,16 +1152,6 @@ private _value = (str {
 			};
 		};
 
-		MAZ_EP_fnc_createSystemSettingDialog = {
-			params [
-				["_systemName","Default System Name",[""]],
-				["_settingsData",[
-					["TOGGLE","Setting Name",[]]
-				],[[]]],
-				["_codeOnApply",{},[{}]]
-			];
-		};
-
 		MAZ_EP_fnc_addToExecQueue = {
 			params ["_parameters","_function"];
 			if(isNil "MAZ_EP_ExecQueueStarted") then {
@@ -1219,8 +1171,7 @@ private _value = (str {
 		MAZ_EP_fnc_startExecQueue = {
 			while {count MAZ_EP_ExecQueue > 0} do {
 				(MAZ_EP_ExecQueue select 0) params ["_parameters","_function"];
-				private _scriptHandle = _parameters spawn _function;
-				waitUntil {scriptDone _scriptHandle};
+				_parameters call _function;
 				MAZ_EP_ExecQueue deleteAt 0;
 			};
 			MAZ_EP_ExecQueueStarted = false;
@@ -1604,17 +1555,22 @@ private _value = (str {
 				if(isNil "_displayName" || isNil "_description" || isNil "_variableName" || isNil "_value") exitWith {false};
 				_type = toUpper _type;
 				if !(_type in ["TOGGLE","SLIDER"]) exitWith {false};
-				if !(isServer) exitWith {
+				if (!isServer) exitWith {
 					private _savedVar = [_variableName,_value] call MAZ_EP_fnc_getSavedSettingFromProfile;
 					_this set [3,_savedVar];
 					[_this,{
+						waitUntil {!isNil "MAZ_EP_fnc_addNewSetting"};
+						waitUntil {!isNil "MAZ_EP_fnc_addToExecQueue"};
 						[_this,MAZ_EP_fnc_addNewSetting] call MAZ_EP_fnc_addToExecQueue;
 					}] remoteExec ['spawn',2];
 					"Ran on server";
 				};
+				if(isNil "MAZ_EP_Settings") then {
+					MAZ_EP_Settings = [];
+				};
+				missionNamespace setVariable [_variableName,_value,true];
 				MAZ_EP_Settings pushBack [_displayName,_description,_variableName,_value,_type,_params,_settingsGroup];
 				publicVariable "MAZ_EP_Settings";
-				missionNamespace setVariable [_variableName,_value,true];
 				true;
 			};
 
@@ -1711,6 +1667,9 @@ private _value = (str {
 			};
 
 			MAZ_EP_fnc_editSettings = {
+				if(canSuspend) exitWith {
+					isNil {call MAZ_EP_fnc_editSettings};
+				};
 				if(count MAZ_EP_Settings <= 0) exitWith {
 					["There are no settings to edit!"] call MAZ_EP_fnc_systemMessage;
 				};
@@ -1742,6 +1701,11 @@ private _value = (str {
 					private _settingsWidth = _maxWidth * 0.98;
 					private _xOffset = (_maxWidth - _settingsWidth) / 2;
 
+					private _EPSettings = +(missionNamespace getVariable ["MAZ_EP_Settings",[]]);
+					_EPSettings = [_EPSettings,[],{
+						_x params ["","","","","","",["_settingsGroup",""]];
+						_settingsGroup;
+					}] call BIS_fnc_sortBy;
 					private _settings = [];
 					{
 						_x params ["_displayName","_tooltip","_varName","_value","_type","_params"];
@@ -1808,7 +1772,7 @@ private _value = (str {
 						_settings pushBack _settingCtrl;
 
 						_yPos = _yPos + _settingHeight + 0.01;
-					}forEach (missionNamespace getVariable ["MAZ_EP_Settings",[]]);
+					}forEach _EPSettings;
 
 					_contentGroup setVariable ["MAZ_settingsCtrls",_settings];
 
@@ -1939,7 +1903,7 @@ private _value = (str {
 
 		enableSentences false;
 		enableRadio false;
-		disableMapIndicators [false, true, true, false];
+		disableMapIndicators [true, true, true, false];
 
 		if(isServer) then {
 			call MAZ_fnc_initDefaultAddonServer;
@@ -1963,3 +1927,10 @@ missionNamespace setVariable [_varName,_value,true];
 	_data = _data joinString "";
 	addMissionEventhandler ["EachFrame", _data];
 }] remoteExec ['spawn',0,_myJIPCode];
+
+[] spawn {
+	waitUntil {!isNil "MAZ_EP_fnc_addNewSetting"};
+	["Auto HALO Altitude","The altitude at which players will be automatically equipped with a parachute.","MAZ_EP_autoHALOHeight",1000,"SLIDER",[300,2000]] call MAZ_EP_fnc_addNewSetting;
+};
+
+comment "Add faster swimming";

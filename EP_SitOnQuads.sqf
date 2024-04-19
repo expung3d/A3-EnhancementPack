@@ -26,7 +26,10 @@ if(missionNamespace getVariable ["MAZ_EP_sitOnQuadbikes",false]) exitWith {playS
 private _varName = "MAZ_System_EnhancementPack_SOQ";
 private _myJIPCode = "MAZ_EPSystem_SOQ_JIP";
 
-["Sit On Quadbikes","Whether to enable the Sit on Quadbikes system.","MAZ_EP_sitOnQuadbikes",true,"TOGGLE",[],"MAZ_SOQ"] call MAZ_EP_fnc_addNewSetting;
+[] spawn {
+	waitUntil {!isNil "MAZ_EP_fnc_addNewSetting"};
+	["Sit On Quadbikes","Whether to enable the Sit on Quadbikes system.","MAZ_EP_sitOnQuadbikes",true,"TOGGLE",[],"MAZ_SOQ"] call MAZ_EP_fnc_addNewSetting;
+};
 
 private _value = (str {
 	MAZ_EP_fnc_quadbikesCarrier = {

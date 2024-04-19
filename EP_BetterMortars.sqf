@@ -26,7 +26,10 @@ if(missionNamespace getVariable ["MAZ_EP_BetterMortarsEnabled",false]) exitWith 
 private _varName = "MAZ_System_EnhancementPack_BM";
 private _myJIPCode = "MAZ_EPSystem_BM_JIP";
 
-["Better Mortars","Whether to enable the Better Mortars system.","MAZ_EP_BetterMortarsEnabled",true,"TOGGLE",[],"MAZ_BM"] call MAZ_EP_fnc_addNewSetting;
+[] spawn {
+	waitUntil {!isNil "MAZ_EP_fnc_addNewSetting"};
+	["Better Mortars","Whether to enable the Better Mortars system.","MAZ_EP_BetterMortarsEnabled",true,"TOGGLE",[],"MAZ_BM"] call MAZ_EP_fnc_addNewSetting;
+};
 
 private _value = (str {
 	MAZ_EP_fnc_mortarReBalanceCarrier = {

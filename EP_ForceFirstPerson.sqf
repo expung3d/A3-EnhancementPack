@@ -26,9 +26,12 @@ if(missionNamespace getVariable ["MAZ_EP_forcedFirstPersonEnabled",false]) exitW
 private _varName = "MAZ_System_EnhancementPack_1PP";
 private _myJIPCode = "MAZ_EPSystem_1PP_JIP";
 
-["Force First Person","Whether to enable the Force First Person system.","MAZ_EP_forcedFirstPersonEnabled",true,"TOGGLE",[],"MAZ_FFP"] call MAZ_EP_fnc_addNewSetting;
-["Allow 3PP in Vehicles (All)","Whether to allow players to use third person while in vehicles.","MAZ_EP_FFP_AllowVehicle",false,"TOGGLE",[],"MAZ_FFP"] call MAZ_EP_fnc_addNewSetting;
-["Allow 3PP in Vehicles (Driver Only)","Whether to allow vehicle drivers to use third person, but not the crew.","MAZ_EP_FFP_DriverOnly",false,"TOGGLE",[],"MAZ_FFP"] call MAZ_EP_fnc_addNewSetting;
+[] spawn {
+	waitUntil {!isNil "MAZ_EP_fnc_addNewSetting"};
+	["Force First Person","Whether to enable the Force First Person system.","MAZ_EP_forcedFirstPersonEnabled",true,"TOGGLE",[],"MAZ_FFP"] call MAZ_EP_fnc_addNewSetting;
+	["Allow 3PP in Vehicles (All)","Whether to allow players to use third person while in vehicles.","MAZ_EP_FFP_AllowVehicle",false,"TOGGLE",[],"MAZ_FFP"] call MAZ_EP_fnc_addNewSetting;
+	["Allow 3PP in Vehicles (Driver Only)","Whether to allow vehicle drivers to use third person, but not the crew.","MAZ_EP_FFP_DriverOnly",false,"TOGGLE",[],"MAZ_FFP"] call MAZ_EP_fnc_addNewSetting;
+};
 
 private _value = (str {
 	MAZ_fnc_forceFirstPersonCarrier = {

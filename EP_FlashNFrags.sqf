@@ -26,8 +26,11 @@ if(missionNamespace getVariable ["MAZ_EP_flashNFragsEnabled",false]) exitWith {p
 private _varName = "MAZ_System_EnhancementPack_FNF";
 private _myJIPCode = "MAZ_EPSystem_FNF_JIP";
 
-["Flash n' Frags","Whether to enable the Flash n' Frags system.","MAZ_EP_flashNFragsEnabled",true,"TOGGLE",[],"MAZ_FF"] call MAZ_EP_fnc_addNewSetting;
-["RGN Flashbangs","Whether to have RGNs be replaced with flashbangs.","MAZ_EP_flashbangsEnabled",true,"TOGGLE",[],"MAZ_FF"] call MAZ_EP_fnc_addNewSetting;
+[] spawn {
+	waitUntil {!isNil "MAZ_EP_fnc_addNewSetting"};
+	["Flash n' Frags","Whether to enable the Flash n' Frags system.","MAZ_EP_flashNFragsEnabled",true,"TOGGLE",[],"MAZ_FF"] call MAZ_EP_fnc_addNewSetting;
+	["RGN Flashbangs","Whether to have RGNs be replaced with flashbangs.","MAZ_EP_flashbangsEnabled",true,"TOGGLE",[],"MAZ_FF"] call MAZ_EP_fnc_addNewSetting;
+};
 
 private _value = (str {
 	MAZ_flashBangCarrier = {

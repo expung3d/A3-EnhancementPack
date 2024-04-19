@@ -26,9 +26,12 @@ if(missionNamespace getVariable ["MAZ_EP_increaseFuelUse",false]) exitWith {play
 private _varName = "MAZ_System_EnhancementPack_IFU";
 private _myJIPCode = "MAZ_EPSystem_IFU_JIP";
 
-["Increased Fuel Burn","Whether to enable the Increased Fuel Burn system.","MAZ_EP_increaseFuelUse",true,"TOGGLE",[],"MAZ_IFB"] call MAZ_EP_fnc_addNewSetting;
-["Fuel Consumption Rate (Ground)","The rate at which ground vehicles burn fuel.\nMultiply the normal burn rate by this value.","MAZ_fuelConsumptionRateGround",2,"SLIDER",[1,4],"MAZ_IFB"] call MAZ_EP_fnc_addNewSetting;
-["Fuel Consumption Rate (Air)","The rate at which air vehicles burn fuel.\nMultiply the normal burn rate by this value.","MAZ_fuelConsumptionRateAir",6,"SLIDER",[1,10],"MAZ_IFB"] call MAZ_EP_fnc_addNewSetting;
+[] spawn {
+	waitUntil {!isNil "MAZ_EP_fnc_addNewSetting"};
+	["Increased Fuel Burn","Whether to enable the Increased Fuel Burn system.","MAZ_EP_increaseFuelUse",true,"TOGGLE",[],"MAZ_IFB"] call MAZ_EP_fnc_addNewSetting;
+	["Fuel Consumption Rate (Ground)","The rate at which ground vehicles burn fuel.\nMultiply the normal burn rate by this value.","MAZ_fuelConsumptionRateGround",2,"SLIDER",[1,4],"MAZ_IFB"] call MAZ_EP_fnc_addNewSetting;
+	["Fuel Consumption Rate (Air)","The rate at which air vehicles burn fuel.\nMultiply the normal burn rate by this value.","MAZ_fuelConsumptionRateAir",6,"SLIDER",[1,10],"MAZ_IFB"] call MAZ_EP_fnc_addNewSetting;
+};
 
 private _value = (str {
 	MAZ_increaseFuelConsumptionInit = {

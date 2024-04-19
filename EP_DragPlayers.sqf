@@ -26,7 +26,10 @@ if(missionNamespace getVariable ["MAZ_EP_dragPlayersEnabled",false]) exitWith {p
 private _varName = "MAZ_System_EnhancementPack_DP";
 private _myJIPCode = "MAZ_EPSystem_DP_JIP";
 
-["Drag Players","Whether to allow the dragging system.","MAZ_EP_dragPlayersEnabled",true,"TOGGLE",[],"MAZ_DP"] call MAZ_EP_fnc_addNewSetting;
+[] spawn {
+	waitUntil {!isNil "MAZ_EP_fnc_addNewSetting"};
+	["Drag Players","Whether to allow the dragging system.","MAZ_EP_dragPlayersEnabled",true,"TOGGLE",[],"MAZ_DP"] call MAZ_EP_fnc_addNewSetting;
+};
 
 private _value = (str {
 	MAZ_EP_fnc_dragPlayersCarrier = {
