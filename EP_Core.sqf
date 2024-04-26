@@ -392,7 +392,7 @@ private _value = (str {
 		call MAZ_fnc_keybindCarrier;
 	};
 
-	MAZ_EP_fnc_defaultKeybindsCarrier = {
+	MAZ_EP_fnc_coreInit = {
 		MAZ_EP_userActions = [];
 		
 		MAZ_smokeGrenades = [
@@ -936,7 +936,7 @@ private _value = (str {
 							case "SmokeShell": {
 								if(isNil "lbWhite") then {
 									lbWhite = _listBox lbAdd "Smoke Grenade (White)";
-									_listBox lbSetData [lbWhite, "White"];
+									_listBox lbSetData [lbWhite, ""];
 								};
 							};
 							case "SmokeShellRed": {
@@ -984,21 +984,34 @@ private _value = (str {
 		MAZ_deploySmoke = {
 			private _listBox = uiNamespace getVariable ['smokeGrenadeList',displayNull];
 			private _smokeIndex = lbCurSel _listBox;
-			private _smokeType = _listBox lbText _smokeIndex;
 			private _smokeData = _listBox lbData _smokeIndex;
-			private _mags = magazines player;
-			private _magType = switch (_smokeData) do {
-				case "White": {"SmokeShell"};
-				case "Red": {"SmokeShellRed"};
-				case "Orange": {"SmokeShellOrange"};
-				case "Yellow": {"SmokeShellYellow"};
-				case "Green": {"SmokeShellGreen"};
-				case "Blue": {"SmokeShellBlue"};
-				case "Purple": {"SmokeShellPurple"};
-			};
-			player removeMagazine _magType;
-			_magType createVehicle position player;
+			MAZ_EP_smokeToDeploy = "SmokeShell" + _smokeData;
 			uiNamespace getVariable ['dropSmokeMenu',displayNull] closeDisplay 0;
+			["", "Aim and click LMB to throw the smoke grenade. Click RMB to cancel."] spawn BIS_fnc_showSubtitle;
+			if(!isNil "MAZ_EP_DEH_MouseDown_deploySmoke") then {
+				(findDisplay 46) displayRemoveEventHandler ["MouseButtonDown",MAZ_EP_DEH_MouseDown_deploySmoke];
+			};
+			MAZ_EP_DEH_MouseDown_deploySmoke = (findDisplay 46) displayAddEventHandler ["MouseButtonDown", {
+				params ["_display","_button"];
+				if(_button != 0) then {
+					["", "Smoke deploy cancelled."] spawn BIS_fnc_showSubtitle;
+				};
+				if(lifeState player != "INCAPACITATED" || _button != 0) exitWith {
+					if(!isNil "MAZ_EP_DEH_MouseDown_deploySmoke") then {
+						(findDisplay 46) displayRemoveEventHandler ["MouseButtonDown",MAZ_EP_DEH_MouseDown_deploySmoke];
+					};
+				};
+				private _viewDirVector = getCameraViewDirection player;
+				private _normVector = vectorNormalized _viewDirVector;
+				private _vel = _normVector vectorMultiply 8;
+				player removeMagazine MAZ_EP_smokeToDeploy;
+				private _smoke = MAZ_EP_smokeToDeploy createVehicle (position player);
+				_smoke setPosATL (getPosATL player vectorAdd [0,0,0.1]);
+				_smoke setVelocity _vel;
+				if(!isNil "MAZ_EP_DEH_MouseDown_deploySmoke") then {
+					(findDisplay 46) displayRemoveEventHandler ["MouseButtonDown",MAZ_EP_DEH_MouseDown_deploySmoke];
+				};
+			}];
 		};
 
 		MAZ_fnc_addKeybinds = {
@@ -1054,30 +1067,64 @@ private _value = (str {
 				[] spawn MAZ_fnc_autoHALO;
 			}];
 
-			waitUntil {!isNull (findDisplay 12)};
-			MAZ_DEH_PreventDeleteMarkers = (findDisplay 12) displayAddEventHandler ["KeyDown", {
-				params ["","_key"];
-				if(_key != 211) exitWith {false}; comment "Don't override anything but the delete key";
-				private _pos = (findDisplay 12 displayCtrl 51) ctrlMapScreenToWorld getMousePosition;
-				private _marker = [allMapMarkers,[],{_pos distanceSqr (getMarkerPos _x)},"ASCEND"] call BIS_fnc_sortBy;
-				_marker = _marker select 0;
-				private _dist = (getMarkerPos _marker) distance2D _pos;
-				if(_dist > 150) exitWith {false}; comment "Not deleting a marker";
-				private _str = format ["%1_Owner",_marker];
-				private _id = getPlayerUID player;
-				private _markerOwner = missionNamespace getVariable [_str,""];
-				if((allPlayers findIf {getPlayerUID _x == _markerOwner}) == -1) exitWith {false}; comment "Not in server";
-				if(_id == _markerOwner || (call BIS_fnc_admin) != 0) exitWith {false}; comment "If you are the marker owner or admin";
-				comment "Otherwise prevent marker deletion";
-				true
+			if(!isNil "MAZ_EH_FiredMan_ImproveWeapons") then {
+				player removeEventHandler ["FiredMan",MAZ_EH_FiredMan_ImproveWeapons];
+			};
+			MAZ_EH_FiredMan_ImproveWeapons = player addEventHandler ["FiredMan", {
+				params ["_unit", "_weapon", "_muzzle", "_mode", "_ammo", "_magazine", "_projectile", "_vehicle"];
+				if("40mm_Smoke" in _ammo) then {
+					[_projectile,_ammo] spawn {
+						params ["_round","_ammo"];
+						waitUntil {(getPosATL _round) # 2 < 0.25};
+						private _pos = getPosATL _round;
+						private _vecDirAndUp = [vectorDir _round, vectorUp _round];
+						deleteVehicle _round;
+						private _index = _ammo find "Smoke";
+						private _color = _ammo select [(_index + 5)];
+						private _smoke = ("SmokeShell" + _color) createVehicle [0,0,0];
+						_pos set [2,0];
+						_smoke setPosATL _pos;
+						_smoke hideObjectGlobal true;
+						private _slug = createSimpleObject ["\A3\weapons_f\Ammo\UGL_slug", [0,0,0]];
+						_slug setPosATL _pos;
+						_slug setVectorDirAndUp _vecDirAndUp;
+						sleep 60;
+						deleteVehicle _slug;
+					};
+				};
+				if(_ammo == "M_NLAW_AT_F") then {
+					private _missileTwo = "R_MRAAWS_HEAT_F" createVehicle [0,0,50];
+					_missileTwo attachTo [_projectile,[0,-0.1,0]];
+				};
 			}];
-
+			
 			if((player getVariable ["LM_MEH_playerNames",-1]) != -1) then {
 				removeMissionEventHandler ['Draw3D', (player getVariable ['LM_MEH_playerNames',-1])];
 			};
 			if((player getVariable ["LM_MEH_killFeed",-1]) != -1) then {
 				removeMissionEventHandler ['EntityKilled', (player getVariable ['LM_MEH_killFeed',-1])];
 			};  
+
+			waitUntil {!isNull (findDisplay 12)};
+			if(!isNil "MAZ_DEH_PreventDeleteMarkers") then {
+				(findDisplay 12) displayRemoveEventHandler ["KeyDown",MAZ_DEH_PreventDeleteMarkers];
+			};
+			MAZ_DEH_PreventDeleteMarkers = (findDisplay 12) displayAddEventHandler ["KeyDown", {
+				params ["","_key"];
+				if(_key != 211) exitWith {}; comment "Don't override anything but the delete key";
+				private _pos = (findDisplay 12 displayCtrl 51) ctrlMapScreenToWorld getMousePosition;
+				private _marker = [allMapMarkers,[],{_pos distanceSqr (getMarkerPos _x)},"ASCEND"] call BIS_fnc_sortBy;
+				_marker = _marker select 0;
+				private _dist = (getMarkerPos _marker) distance2D _pos;
+				if(_dist > 150) exitWith {}; comment "Not deleting a marker";
+				private _str = format ["%1_Owner",_marker];
+				private _id = getPlayerUID player;
+				private _markerOwner = missionNamespace getVariable [_str,""];
+				if((allPlayers findIf {getPlayerUID _x == _markerOwner}) == -1) exitWith {}; comment "Not in server";
+				if(_id == _markerOwner || (call BIS_fnc_admin) != 0) exitWith {}; comment "If you are the marker owner or admin";
+				comment "Otherwise prevent marker deletion";
+				true
+			}];
 		};
 
 		MAZ_fnc_initDefaultAddonServer = {
@@ -1570,6 +1617,10 @@ private _value = (str {
 				};
 				missionNamespace setVariable [_variableName,_value,true];
 				MAZ_EP_Settings pushBack [_displayName,_description,_variableName,_value,_type,_params,_settingsGroup];
+				MAZ_EP_Settings = [MAZ_EP_Settings,[],{
+					_x params ["","","","","","",["_settingsGroup",""]];
+					_settingsGroup;
+				}] call BIS_fnc_sortBy;
 				publicVariable "MAZ_EP_Settings";
 				true;
 			};
@@ -1701,11 +1752,6 @@ private _value = (str {
 					private _settingsWidth = _maxWidth * 0.98;
 					private _xOffset = (_maxWidth - _settingsWidth) / 2;
 
-					private _EPSettings = +(missionNamespace getVariable ["MAZ_EP_Settings",[]]);
-					_EPSettings = [_EPSettings,[],{
-						_x params ["","","","","","",["_settingsGroup",""]];
-						_settingsGroup;
-					}] call BIS_fnc_sortBy;
 					private _settings = [];
 					{
 						_x params ["_displayName","_tooltip","_varName","_value","_type","_params"];
@@ -1772,7 +1818,7 @@ private _value = (str {
 						_settings pushBack _settingCtrl;
 
 						_yPos = _yPos + _settingHeight + 0.01;
-					}forEach _EPSettings;
+					}forEach (missionNamespace getVariable ["MAZ_EP_Settings",[]]);
 
 					_contentGroup setVariable ["MAZ_settingsCtrls",_settings];
 
@@ -1812,7 +1858,7 @@ private _value = (str {
 								};
 								case 43: {
 									comment "Slider";
-									_value = sliderPosition _x;
+									_value = round (sliderPosition _x);
 								};
 							};
 							
@@ -1909,7 +1955,7 @@ private _value = (str {
 			call MAZ_fnc_initDefaultAddonServer;
 		};
 	};
-	call MAZ_EP_fnc_defaultKeybindsCarrier;
+	call MAZ_EP_fnc_coreInit;
 }) splitString "";
 
 _value deleteAt (count _value - 1);
@@ -1933,4 +1979,4 @@ missionNamespace setVariable [_varName,_value,true];
 	["Auto HALO Altitude","The altitude at which players will be automatically equipped with a parachute.","MAZ_EP_autoHALOHeight",1000,"SLIDER",[300,2000]] call MAZ_EP_fnc_addNewSetting;
 };
 
-comment "Add faster swimming ";
+comment "Add faster swimming";

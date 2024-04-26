@@ -78,26 +78,6 @@ private _value = (str {
 				]
 			];
 
-			private _releaseAction = _unit getVariable ["MAZ_ReleaseAction",-1];
-			if(_releaseAction != -1) then {
-				_unit removeAction _releaseAction;
-			};
-			_unit setVariable ["MAZ_ReleaseAction",
-				_unit addAction [
-					"Release Player",
-					{
-						params ["_target", "_caller", "_actionId", "_arguments"];
-						[_target,_caller,1] call MAZ_fnc_releaseBody;
-					},
-					nil,
-					1.5,
-					true,
-					false,
-					"",
-					"[_originalTarget,_this] call MAZ_fnc_canDropPlayer"
-				]
-			];
-
 			private _loadAction = _unit getVariable ["MAZ_LoadAction",-1];
 			if(_loadAction != -1) then {
 				_unit removeAction _loadAction;
@@ -124,6 +104,28 @@ private _value = (str {
 					false,
 					"",
 					"[_originalTarget,_this] call MAZ_fnc_canLoadPlayer"
+				]
+			];
+		};
+
+		MAZ_fnc_addDropPlayerAction = {
+			private _releaseAction = player getVariable ["MAZ_ReleaseAction",-1];
+			if(_releaseAction != -1) then {
+				player removeAction _releaseAction;
+			};
+			player setVariable ["MAZ_ReleaseAction",
+				player addAction [
+					"Release Player",
+					{
+						params ["_target", "_caller", "_actionId", "_arguments"];
+						[_caller,1] call MAZ_fnc_releaseBody;
+					},
+					nil,
+					1.5,
+					true,
+					false,
+					"",
+					"[_originalTarget] call MAZ_fnc_canDropPlayer"
 				]
 			];
 		};
@@ -155,12 +157,12 @@ private _value = (str {
 		};
 
 		MAZ_fnc_canDropPlayer = {
-			params ["_dragged","_dragger"];
-			if(_dragged == _dragger) exitWith {false};
-			if(!alive _dragged) exitWith {false};
+			params ["_dragger"];
 			private _draggingObject = _dragger getVariable ["MAZ_draggingObject",objNull];
 			if(isNull _draggingObject) exitWith {false};
-			if(_draggingObject == _dragged) exitWith {true};
+			if(_draggingObject == _dragger) exitWith {false};
+			if(!alive _draggingObject) exitWith {false};
+			true
 		};
 
 		MAZ_fnc_canTakeBag = {
@@ -192,7 +194,8 @@ private _value = (str {
 		};
 
 		MAZ_fnc_releaseBody = {
-			params ["_body","_dragger","_mode"];
+			params ["_dragger","_mode"];
+			private _body = _dragger getVariable ["MAZ_draggingObject",objNull];
 			detach _body;
 			_body setVariable ["MAZ_isDragged",false,true];
 			_dragger setVariable ["MAZ_isDragging",false,true];
@@ -327,6 +330,7 @@ private _value = (str {
 				_unit setVariable ["MAZ_isDragged",false,true];
 				_unit setVariable ["MAZ_isDragging",false,true];
 				_unit setVariable ["MAZ_draggingObject",objNull,true];
+				call MAZ_fnc_addDropPlayerAction;
 				[[_unit],{
 					params ["_unit"];
 					waitUntil {!isNil "MAZ_fnc_dragPlayerActions"};
@@ -334,6 +338,7 @@ private _value = (str {
 				}] remoteExec ['spawn',0,_unit];
 			}];
 
+			call MAZ_fnc_addDropPlayerAction;
 			[[player],{
 				params ["_unit"];
 				waitUntil {!isNil "MAZ_fnc_dragPlayerActions"};

@@ -483,6 +483,9 @@ private _value = (str {
 					"WhiteHead_19",
 					"WhiteHead_20",
 					"WhiteHead_21",
+					"WhiteHead_22_a",
+					"WhiteHead_22_l",
+					"WhiteHead_22_sa",
 					"WhiteHead_23",
 					"WhiteHead_24",
 					"WhiteHead_25",
@@ -507,12 +510,18 @@ private _value = (str {
 					"GreekHead_A3_11",
 					"GreekHead_A3_12",
 					"GreekHead_A3_13",
-					"GreekHead_A3_14"
+					"GreekHead_A3_14",
+					"GreekHead_A3_10_a",
+					"GreekHead_A3_10_sa",
+					"GreekHead_A3_10_l"
 				];
 				private _persianHeads = [
 					"PersianHead_A3_01",
 					"PersianHead_A3_02",
-					"PersianHead_A3_03"
+					"PersianHead_A3_03",
+					"PersianHead_A3_04_a",
+					"PersianHead_A3_04_sa",
+					"PersianHead_A3_04_l"
 				];
 				private _chineseHead = [
 					"AsianHead_A3_01",
@@ -521,7 +530,10 @@ private _value = (str {
 					"AsianHead_A3_04",
 					"AsianHead_A3_05",
 					"AsianHead_A3_06",
-					"AsianHead_A3_07"
+					"AsianHead_A3_07",
+					"PersianHead_A3_04_a",
+					"PersianHead_A3_04_sa",
+					"PersianHead_A3_04_l"
 				];
 				private _tanoanHead = [
 					"TanoanHead_A3_01",
@@ -532,7 +544,10 @@ private _value = (str {
 					"TanoanHead_A3_06",
 					"TanoanHead_A3_07",
 					"TanoanHead_A3_08",
-					"TanoanHead_A3_09"
+					"TanoanHead_A3_09",
+					"PersianHead_A3_04_a",
+					"PersianHead_A3_04_sa",
+					"PersianHead_A3_04_l"
 				];
 				private _polishHead = [
 					"LivonianHead_1",
@@ -544,14 +559,20 @@ private _value = (str {
 					"LivonianHead_7",
 					"LivonianHead_8",
 					"LivonianHead_9",
-					"LivonianHead_10"
+					"LivonianHead_10",
+					"WhiteHead_22_a",
+					"WhiteHead_22_l",
+					"WhiteHead_22_sa"
 				];
 				private _russianHead = [
 					"RussianHead_1",
 					"RussianHead_2",
 					"RussianHead_3",
 					"RussianHead_4",
-					"RussianHead_5"
+					"RussianHead_5",
+					"WhiteHead_22_a",
+					"WhiteHead_22_l",
+					"WhiteHead_22_sa"
 				];
 
 				if(_world == "Altis" || _world == "Stratis" || _world == "VR") then {
