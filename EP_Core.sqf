@@ -572,55 +572,165 @@ private _value = (str {
 		};
 
 		MAZ_fnc_assignSavedViewDistance = {
-			private _distance = profileNamespace getVariable ["MAZ_defaultViewDistance",1600];
-			setViewDistance _distance;
+			private _distance = profileNamespace getVariable ["MAZ_defaultViewDistance",[]];
+			if(_distance isEqualType 1600) then {
+				_distance = [];
+			};
+			if(_distance isEqualTo []) then {
+				_distance = [[1600,1600],[2500,2000],[3000,2500]];
+				profileNamespace setVariable ["MAZ_defaultViewDistance",_distance];
+				saveProfileNamespace;
+			};
+			private _dist = _distance # 0;
+			setViewDistance (_dist # 0);
+			setObjectViewDistance (_dist # 1);
+		};
+
+		MAZ_fnc_saveViewDistance = {
+			params ["_distance","_objectDist","_mode"];
+			private _savedDist = profileNamespace getVariable ["MAZ_defaultViewDistance",[]];
+			_savedDist set [_mode,[_distance,_objectDist]];
+			profileNamespace setVariable ["MAZ_defaultViewDistance",_savedDist];
+			saveProfileNamespace;
+		};
+
+		MAZ_fnc_getSavedViewDistance = {
+			params ["_mode"];
+			private _savedDist = profileNamespace getVariable ["MAZ_defaultViewDistance",[]];
+			(_savedDist # _mode);
+		};
+
+		MAZ_fnc_newViewDistanceMenu = {
+			with uiNamespace do {
+				MAZ_ViewDist_Display = (findDisplay 46) createDisplay "RscDisplayEmpty";
+				MAZ_ViewDist_Display displayAddEventHandler ["Unload", {
+					call MAZ_fnc_confirmViewDistance;
+				}];
+				MAZ_ViewDist_ControlGroup = MAZ_ViewDist_Display ctrlCreate ["RscControlsGroupNoScrollbars",3010];
+				MAZ_ViewDist_ControlGroup ctrlSetPosition [0.3,0.12,0.4,0];
+				MAZ_ViewDist_ControlGroup ctrlCommit 0;
+				
+				private _bg = MAZ_ViewDist_Display ctrlCreate ["RscPicture",-1,MAZ_ViewDist_ControlGroup];
+				_bg ctrlSetPosition [0,0.045,0.4,0];
+				_bg ctrlSetText "#(argb,8,8,3)color(0,0,0,0.7)";
+
+				private _color = ["GUI", "BCG_RGB"] call BIS_fnc_displayColorGet;
+				private _text = MAZ_ViewDist_Display ctrlCreate ["RscText",-1,MAZ_ViewDist_ControlGroup];
+				_text ctrlSetText "CHANGE VIEW DISTANCE";
+				_text ctrlSetPosition [0,0,0.4,0.04];
+				_text ctrlSetTextColor (["GUI", "TITLETEXT_RGB"] call BIS_fnc_displayColorGet);
+				_text ctrlSetBackgroundColor _color;
+				_text ctrlCommit 0;
+
+				private _yPos = 0.05;
+				private _spacing = 0.01;
+
+				MAZ_ViewDist_LabelCtrls = [];
+				{
+					private _typeText = MAZ_ViewDist_Display ctrlCreate ["RscStructuredText",-1,MAZ_ViewDist_ControlGroup];
+					_typeText ctrlSetStructuredText parseText (format ["<t align='right'>%1</t>",_x]);
+					_typeText ctrlSetPosition [0,_yPos,0.1,0.04];
+					_typeText ctrlSetBackgroundColor [0,0,0,0.8];
+					_typeText ctrlCommit 0;
+					MAZ_ViewDist_LabelCtrls pushBack _typeText;
+					_yPos = _yPos + 0.04 + _spacing;
+
+					private _viewDistanceIndex = _forEachIndex;
+					private _viewDistances = [_viewDistanceIndex] call (missionNamespace getVariable ["MAZ_fnc_getSavedViewDistance",{}]);
+					private _sliders = [];
+					{
+						private _viewDistLabel = MAZ_ViewDist_Display ctrlCreate ["RscStructuredText",-1,MAZ_ViewDist_ControlGroup];
+						_viewDistLabel ctrlSetStructuredText parseText (format ["<t align='right'>%1:</t>",_x]);
+						_viewDistLabel ctrlSetPosition [0,_yPos,0.1,0.04];
+						_viewDistLabel ctrlCommit 0;
+
+						private _viewDistanceSlider = MAZ_ViewDist_Display ctrlCreate ["RscXSliderH",-1,MAZ_ViewDist_ControlGroup];
+						_viewDistanceSlider ctrlSetPosition [0.1,_yPos,0.2,0.04];
+						_viewDistanceSlider sliderSetRange [1000,12000];
+						_viewDistanceSlider sliderSetPosition (_viewDistances # _forEachIndex);
+						_viewDistanceSlider ctrlAddEventHandler ["sliderPosChanged", {
+							params ["_ctrlSlider", "_value"];
+							private _ctrlEdit = _ctrlSlider getVariable "MAZ_SliderLinkedEdit";
+							private _roundedValue = round _value;
+							_ctrlEdit ctrlSetText format ["%1",_roundedValue];
+						}];
+						_viewDistanceSlider ctrlCommit 0;
+						_sliders pushBack _viewDistanceSlider;
+
+						private _viewDistanceEdit = MAZ_ViewDist_Display ctrlCreate ["RscEdit",-1,MAZ_ViewDist_ControlGroup];
+						_viewDistanceEdit ctrlSetPosition [0.31,_yPos,0.08,0.04];
+						_viewDistanceEdit ctrlSetText (str (_viewDistances # _forEachIndex));
+						_viewDistanceEdit ctrlAddEventHandler ["KeyUp", {
+							params ["_control", "_key", "_shift", "_ctrl", "_alt"];
+							private _num = parseNumber (ctrlText _control);
+							private _sliderCtrl = _control getVariable "MAZ_EditLinkedSlider";
+							_sliderCtrl sliderSetPosition _num;
+						}];
+						_viewDistanceEdit ctrlCommit 0;
+
+						_viewDistanceEdit setVariable ["MAZ_EditLinkedSlider",_viewDistanceSlider];
+						_viewDistanceEdit setVariable ["MAZ_SliderLinkedEdit",_viewDistanceEdit];
+
+						_yPos = _yPos + 0.04 + _spacing;
+					}forEach ["VIEW","OBJECT"];
+					_typeText setVariable ["MAZ_ViewDist_Sliders",_sliders];
+				}forEach ["ON FOOT","IN CAR","IN AIR"];
+				_yPos = _yPos - 0.04;
+				_bg ctrlSetPositionH _yPos;
+				_bg ctrlCommit 0;
+
+				private _closeButton = MAZ_ViewDist_Display ctrlCreate ["RscButtonMenu",-1,MAZ_ViewDist_ControlGroup];
+				_closeButton ctrlSetPosition [0,_yPos + 0.05,0.4,0.04];
+				_closeButton ctrlSetText "CLOSE";
+				_closeButton ctrlAddEventHandler ["ButtonClick",{
+					with uiNamespace do {
+						MAZ_ViewDist_Display closeDisplay 0;
+					};
+				}];
+				_closeButton ctrlCommit 0;
+				_yPos = _yPos + 0.09;
+
+				MAZ_ViewDist_ControlGroup ctrlSetPositionH _yPos;
+				MAZ_ViewDist_ControlGroup ctrlSetPositionY (0.5 - (_yPos / 2));
+				MAZ_ViewDist_ControlGroup ctrlCommit 0;
+			};
+		};
+
+		MAZ_fnc_confirmViewDistance = {
+			private _labels = uiNamespace getVariable ["MAZ_ViewDist_LabelCtrls",[]];
+			private _viewDistances = [];
+			{
+				private _sliders = _x getVariable ["MAZ_ViewDist_Sliders",[]];
+				private _viewDist = [];
+				{
+					_viewDist pushBack (round (sliderPosition _x));
+				}forEach _sliders;
+				_viewDistances pushBack _viewDist;
+			}forEach _labels;
+
+			{
+				private _saved = [_forEachIndex] call MAZ_fnc_getSavedViewDistance;
+				if(_x isEqualTo _saved) then {continue};
+				[_x # 0, _x # 1,_forEachIndex] call MAZ_fnc_saveViewDistance;
+			}forEach _viewDistances;
+			call MAZ_fnc_setViewDistance;
 		};
 
 		MAZ_fnc_setViewDistance = {
-			params ["_distance"];
-			profileNamespace setVariable ["MAZ_defaultViewDistance",_distance];
-			saveProfileNamespace;
-			setViewDistance _distance;
-		};
-
-		comment "TODO : UPDATE UI, VERY UGLY";
-		MAZ_fnc_liteViewDistanceMenu = {
-			MAZ_currentViewDistance = viewDistance;
-			with uiNamespace do {
-				viewDistLite = (findDisplay 46) createDisplay "RscDisplayEmpty";
-				showChat true;
-
-				viewDistChanger = viewDistLite ctrlCreate ["RscStructuredText", 1100];
-				viewDistChanger ctrlSetStructuredText parseText "Change View Distance";
-				viewDistChanger ctrlSetPosition [0.438125 * safezoneW + safezoneX,0.429 * safezoneH + safezoneY,0.12375 * safezoneW,0.022 * safezoneH];
-				viewDistChanger ctrlSetTextColor [1,1,1,1];
-				viewDistChanger ctrlSetBackgroundColor [0.1,0.5,0,1];
-				viewDistChanger ctrlCommit 0;
-
-				viewDistBG = viewDistLite ctrlCreate ["RscPicture", 1200];
-				viewDistBG ctrlSetText "#(argb,8,8,3)color(0,0,0,0.65)";
-				viewDistBG ctrlSetPosition [0.438125 * safezoneW + safezoneX,0.456 * safezoneH + safezoneY,0.12375 * safezoneW,0.088 * safezoneH];
-				viewDistBG ctrlCommit 0;
-
-				viewDistFrame = viewDistLite ctrlCreate ["RscFrame", 1800];
-				viewDistFrame ctrlSetPosition [0.438125 * safezoneW + safezoneX,0.456 * safezoneH + safezoneY,0.12375 * safezoneW,0.088 * safezoneH];
-				viewDistFrame ctrlCommit 0;
-
-				viewDistEdit = viewDistLite ctrlCreate ["RscEdit", 1400];
-				viewDistEdit ctrlSetText format ["%1",missionNamespace getVariable 'MAZ_currentViewDistance'];
-				viewDistEdit ctrlSetPosition [0.443281 * safezoneW + safezoneX,0.467 * safezoneH + safezoneY,0.113437 * safezoneW,0.033 * safezoneH];
-				viewDistEdit ctrlCommit 0;
-
-				viewDistButton = viewDistLite ctrlCreate ["RscButtonMenu", 2400];
-				viewDistButton ctrlSetStructuredText parseText "Apply";
-				viewDistButton ctrlSetPosition [0.448438 * safezoneW + safezoneX,0.511 * safezoneH + safezoneY,0.103125 * safezoneW,0.022 * safezoneH];
-				viewDistButton ctrlAddEventHandler ["ButtonClick",{
-					private _newDistance = parseNumber (ctrlText (uiNamespace getVariable 'viewDistEdit'));
-					[_newDistance] call MAZ_fnc_setViewDistance;
-					with uiNamespace do {viewDistLite closeDisplay 0;};
-				}];
-				viewDistButton ctrlCommit 0;
+			if(vehicle player == player) exitWith {
+				private _dist = [0] call MAZ_fnc_getSavedViewDistance;
+				setViewDistance (_dist # 0);
+				setObjectViewDistance (_dist # 1);
 			};
+			private _veh = vehicle player;
+			if(_veh isKindOf "Air") exitWith {
+				private _dist = [2] call MAZ_fnc_getSavedViewDistance;
+				setViewDistance (_dist # 0);
+				setObjectViewDistance (_dist # 1);
+			};
+			private _dist = [1] call MAZ_fnc_getSavedViewDistance;
+			setViewDistance (_dist # 0);
+			setObjectViewDistance (_dist # 1);
 		};
 
 		MAZ_fnc_holsterWeapon = {
@@ -1028,7 +1138,7 @@ private _value = (str {
 			};
 			MAZ_Key_Earplugs = ["Toggle Earplugs","Toggle your earplugs.",207,{call MAZ_fnc_earplugsLite;},false,false,false,false,false,"MAZ_Earplugs"] call MAZ_fnc_newKeybind;
 			MAZ_Key_Holster = ["Holster Weapon","Holster your weapon.",35,{[] spawn MAZ_fnc_holsterWeapon;},false,false,false,false,false,"MAZ_Holster"] call MAZ_fnc_newKeybind;
-			MAZ_Key_ViewDist = ["Edit View Distance","Edit your view distance (Local).",73,{[] spawn MAZ_fnc_liteViewDistanceMenu;},false,false,false,true,false,"MAZ_ViewDistance"] call MAZ_fnc_newKeybind;
+			MAZ_Key_ViewDist = ["Edit View Distance","Edit your view distance (Local).",73,{[] spawn MAZ_fnc_newViewDistanceMenu;},false,false,false,true,false,"MAZ_ViewDistance"] call MAZ_fnc_newKeybind;
 			MAZ_Key_Unflip = ["Unflip Vehicle","Unflip the vehicle you look at.",12,{[] spawn MAZ_liteUnflip;},false,true,false,false,false,"MAZ_Unflip"] call MAZ_fnc_newKeybind;
 			MAZ_Key_SitDown = ["Sit Down","Sit down in the chair.",208,{[] spawn MAZ_fnc_sitDown;},false,false,false,true,false,"MAZ_SitDown"] call MAZ_fnc_newKeybind;
 			MAZ_Key_StandUp = ["Stand Up","Stand up from the chair.",200,{[] spawn MAZ_fnc_standUp;},false,false,false,true,false,"MAZ_SitDown"] call MAZ_fnc_newKeybind;
@@ -1060,11 +1170,18 @@ private _value = (str {
 				_override
 			}];
 
-			if(!isNil "MAZ_EH_GetOutMan_AutoHALO") then {
-				player removeEventHandler ["GetOutMan",MAZ_EH_GetOutMan_AutoHALO];
+			if(!isNil "MAZ_EH_GetOutMan_General") then {
+				player removeEventHandler ["GetOutMan",MAZ_EH_GetOutMan_General];
 			};
-			MAZ_EH_GetOutMan_AutoHALO = player addEventHandler ["GetOutMan", {
+			MAZ_EH_GetOutMan_General = player addEventHandler ["GetOutMan", {
+				[] spawn MAZ_fnc_setViewDistance;
 				[] spawn MAZ_fnc_autoHALO;
+			}];
+			if(!isNil "MAZ_EH_GetInMan_General") then {
+				player removeEventHandler ["GetOutMan",MAZ_EH_GetInMan_General];
+			};
+			MAZ_EH_GetInMan_General = player addEventHandler ["GetInMan", {
+				[] spawn MAZ_fnc_setViewDistance;
 			}];
 
 			if(!isNil "MAZ_EH_FiredMan_ImproveWeapons") then {
@@ -1084,7 +1201,7 @@ private _value = (str {
 						private _smoke = ("SmokeShell" + _color) createVehicle [0,0,0];
 						_pos set [2,0];
 						_smoke setPosATL _pos;
-						_smoke hideObjectGlobal true;
+						[_smoke,true] remoteExec ['hideObject'];
 						private _slug = createSimpleObject ["\A3\weapons_f\Ammo\UGL_slug", [0,0,0]];
 						_slug setPosATL _pos;
 						_slug setVectorDirAndUp _vecDirAndUp;

@@ -91,7 +91,7 @@ private _value = (str {
 						if(!isNull _vehicleToMoveIn) then {
 							private _dragger = attachedTo _target;
 							if(_dragger getVariable ["MAZ_isDragging",false]) then {
-								[_target,_dragger,1] call MAZ_fnc_releaseBody;
+								[_dragger,1] call MAZ_fnc_releaseBody;
 							};
 							[[_vehicleToMoveIn], {
 								_this call MAZ_fnc_moveInVehicle;
@@ -246,11 +246,11 @@ private _value = (str {
 				!alive _dragger || 
 				!((lifeState _dragged) isEqualTo "INCAPACITATED")
 			) then {
-				[_dragged,_dragger,1] call MAZ_fnc_releaseBody;
+				[_dragger,1] call MAZ_fnc_releaseBody;
 			};
 
 			if(vehicle _dragger != _dragger || (vectorMagnitude (velocity _dragger)) > 1.2) then {
-				[_dragged,_dragger,2] call MAZ_fnc_releaseBody;
+				[_dragger,2] call MAZ_fnc_releaseBody;
 			};
 		};
 
