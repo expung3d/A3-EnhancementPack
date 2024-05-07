@@ -55,6 +55,7 @@ private _value = (str {
 			[_bangLight,[0,0.29,17.79,4.69,9.64,0]] remoteExec ['setLightAttenuation'];
 			[_bangLight,false] remoteExec ['setLightUseFlare'];
 			[_bangLight,true] remoteExec ['setLightDayLight'];
+			private _zeuses = allPlayers select {!isNull (getAssignedCuratorLogic _x)};
 			private _nearestUnits = _bangPosATL nearEntities ["Man",15];
 			{
 				private _unit = _x; 
@@ -82,7 +83,7 @@ private _value = (str {
 						}] remoteExec ["spawn",owner _unit];
 					};
 				};
-			}forEach _nearestUnits;
+			}forEach (_nearestUnits - _zeuses);
 			sleep .3;
 			deleteVehicle _bangLight;
 		};

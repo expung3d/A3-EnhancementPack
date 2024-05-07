@@ -787,18 +787,6 @@ private _value = (str {
 				playSound3D [format ["A3\dubbing_radio_f_enoch\data\%1\%2\%3\200_CombatShouts\%4",_folderPath,_speaker,_behaviorPlayer,_nadeLine], player,false,getPosASL player,5,1,75];
 			};
 			playSound3D [format ["A3\dubbing_radio_f\data\%1\%2\RadioProtocol%5\%3\200_CombatShouts\%4",_folderPath,_speaker,_behaviorPlayer,_nadeLine,_folderPath select [0,3]], player,false,getPosASL player,5,1,75];
-
-
-			comment '
-			if("eng" in _speaker) then {
-				if("engb" in _speaker) then {
-					playSound3D [format ["A3\dubbing_radio_f\data\engb\%1\RadioProtocolENG\COMBAT\200_CombatShouts\%2",_speaker,_nadeLine], player,false,getPosASL player,5,1,75];
-				} else {
-					playSound3D [format ["A3\dubbing_radio_f\data\eng\%1\RadioProtocolENG\COMBAT\200_CombatShouts\%2",_speaker,_nadeLine], player,false,getPosASL player,5,1,75];
-				};
-			} else {
-				playSound3D [format ["A3\dubbing_radio_f\data\eng\Male02ENG\RadioProtocolENG\COMBAT\200_CombatShouts\%1",_nadeLine], player,false,getPosASL player,5,1,75];
-			}';
 		};
 
 		MAZ_fnc_callSmokeThrow = {
@@ -808,16 +796,16 @@ private _value = (str {
 				"ThrowingSmokeE_1.ogg",
 				"ThrowingSmokeE_2.ogg"
 			];
+			private _behaviorPlayer = "COMBAT";
+			private _folderPath = _speaker select [6];
 			private _smokeLine = selectRandom _throwSmoke;
-			if("eng" in _speaker) then {
-				if("engb" in _speaker) then {
-					playSound3D [format ["A3\dubbing_radio_f\data\engb\%1\RadioProtocolENG\COMBAT\200_CombatShouts\%2",_speaker,_smokeLine], player,false,getPosASL player,5,1,75];
-				} else {
-					playSound3D [format ["A3\dubbing_radio_f\data\eng\%1\RadioProtocolENG\COMBAT\200_CombatShouts\%2",_speaker,_smokeLine], player,false,getPosASL player,5,1,75];
-				};
-			} else {
-				playSound3D [format ["A3\dubbing_radio_f\data\eng\Male02ENG\RadioProtocolENG\COMBAT\200_CombatShouts\%1",_smokeLine], player,false,getPosASL player,5,1,75];
+			if("chi" in _speaker || "fre" in _speaker || "engfre" in _speaker) exitWith {
+				playSound3D [format ["A3\dubbing_radio_f_exp\data\%1\%2\RadioProtocol%5\%3\200_CombatShouts\%4",_folderPath,_speaker,_behaviorPlayer,_smokeLine,_folderPath select [0,3]], player,false,getPosASL player,5,1,75];
 			};
+			if("pol" in _speaker || "rus" in _speaker) exitWith {
+				playSound3D [format ["A3\dubbing_radio_f_enoch\data\%1\%2\%3\200_CombatShouts\%4",_folderPath,_speaker,_behaviorPlayer,_smokeLine], player,false,getPosASL player,5,1,75];
+			};
+			playSound3D [format ["A3\dubbing_radio_f\data\%1\%2\RadioProtocol%5\%3\200_CombatShouts\%4",_folderPath,_speaker,_behaviorPlayer,_smokeLine,_folderPath select [0,3]], player,false,getPosASL player,5,1,75];
 		};
 
 		MAZ_fnc_callReadyToFire = {
