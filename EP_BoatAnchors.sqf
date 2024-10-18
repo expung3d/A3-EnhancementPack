@@ -45,10 +45,9 @@ private _value = (str {
 		private _settings = ["MAZ_BA"] call MAZ_EP_fnc_getSettingsFromSettingsGroup;
 		waitUntil {uiSleep 0.1; [_settings] call MAZ_EP_fnc_isSettingsGroupInitiliazed;};
 		MAZ_fnc_boatAnchorServerLoop = {
-			while{MAZ_EP_CoreEnabled} do {
-				call MAZ_fnc_setupBoatAnchor;
-				sleep 1;
-			};
+			if(time < (missionNamespace getVariable ["MAZ_BA_loopTime",time])) exitWith {};
+			call MAZ_fnc_setupBoatAnchor;
+			missionNamespace setVariable ["MAZ_BA_loopTime",time + 1];
 		};
 
 		MAZ_fnc_setupBoatAnchor = {
@@ -194,7 +193,8 @@ private _value = (str {
 		};
 
 		if(isServer) then {
-			[] spawn MAZ_fnc_boatAnchorServerLoop;
+			waitUntil {!isNil "MAZ_EP_fnc_addFunctionToMainLoop"};
+			["MAZ_fnc_boatAnchorServerLoop"] call MAZ_EP_fnc_addFunctionToMainLoop;
 		};
 	};
 	[] spawn {
