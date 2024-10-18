@@ -51,40 +51,39 @@ private _value = (str {
 		private _settings = ["MAZ_CC"] call MAZ_EP_fnc_getSettingsFromSettingsGroup;
 		waitUntil {uiSleep 0.1; [_settings] call MAZ_EP_fnc_isSettingsGroupInitiliazed;};
 		MAZ_autoCallMedic = {
-			while{MAZ_EP_CoreEnabled} do {
-				if(!MAZ_EP_CC_combatCalloutsEnabled || !MAZ_EP_CC_callMedicToggle) exitWith {sleep MAZ_EP_CC_delayToCallMedic;};
-				private _lState = lifeState player;
-				if(_lState isEqualTo "INCAPACITATED") then {
-					private _medicLines = [
-						"HealthIAmBadlyHurt.ogg",
-						"HealthIAmWounded.ogg",
-						"HealthINeedHelpNow.ogg",
-						"HealthMedic.ogg",
-						"HealthNeedHelp.ogg",
-						"HealthNeedMedicNow.ogg",
-						"HealthSomebodyHelpMe.ogg",
-						"HealthWounded.ogg"
-					];
-					private _medicLine = selectRandom _medicLines;
-					[player] spawn MAZ_makeLipSync;
+			if(!MAZ_EP_CC_combatCalloutsEnabled || !MAZ_EP_CC_callMedicToggle) exitWith {};
+			if(time < (missionNamespace getVariable ["MAZ_EP_CC_loopTime",time])) exitWith {};
+			private _lState = lifeState player;
+			if(_lState isEqualTo "INCAPACITATED") then {
+				private _medicLines = [
+					"HealthIAmBadlyHurt.ogg",
+					"HealthIAmWounded.ogg",
+					"HealthINeedHelpNow.ogg",
+					"HealthMedic.ogg",
+					"HealthNeedHelp.ogg",
+					"HealthNeedMedicNow.ogg",
+					"HealthSomebodyHelpMe.ogg",
+					"HealthWounded.ogg"
+				];
+				private _medicLine = selectRandom _medicLines;
+				[player] spawn MAZ_makeLipSync;
 
-					private _speaker = toLower (speaker player);
-					private _folderPath = _speaker select [6];
-					private _isSaid = false;
-					if("chi" in _speaker || "fre" in _speaker || "engfre" in _speaker) then {
-						_isSaid = true;
-						playSound3D [format ["A3\dubbing_radio_f_exp\data\%1\%2\RadioProtocol%4\Normal\140_Com_Status\%3",_folderPath,_speaker,_medicLine,_folderPath select [0,3]], player,false,getPosASL player,5,1,75];
-					};
-					if("pol" in _speaker || "rus" in _speaker) then {
-						_isSaid = true;
-						playSound3D [format ["A3\dubbing_radio_f_enoch\data\%1\%2\Normal\140_Com_Status\%3",_folderPath,_speaker,_medicLine], player,false,getPosASL player,5,1,75];
-					};
-					if(!_isSaid) then {
-						playSound3D [format ["A3\dubbing_radio_f\data\%1\%2\RadioProtocol%4\Normal\140_Com_Status\%3",_folderPath,_speaker,_medicLine,_folderPath select [0,3]], player,false,getPosASL player,5,1,75];
-					};
+				private _speaker = toLower (speaker player);
+				private _folderPath = _speaker select [6];
+				private _isSaid = false;
+				if("chi" in _speaker || "fre" in _speaker || "engfre" in _speaker) then {
+					_isSaid = true;
+					playSound3D [format ["A3\dubbing_radio_f_exp\data\%1\%2\RadioProtocol%4\Normal\140_Com_Status\%3",_folderPath,_speaker,_medicLine,_folderPath select [0,3]], player,false,getPosASL player,5,1,75];
 				};
-				sleep MAZ_EP_CC_delayToCallMedic;
+				if("pol" in _speaker || "rus" in _speaker) then {
+					_isSaid = true;
+					playSound3D [format ["A3\dubbing_radio_f_enoch\data\%1\%2\Normal\140_Com_Status\%3",_folderPath,_speaker,_medicLine], player,false,getPosASL player,5,1,75];
+				};
+				if(!_isSaid) then {
+					playSound3D [format ["A3\dubbing_radio_f\data\%1\%2\RadioProtocol%4\Normal\140_Com_Status\%3",_folderPath,_speaker,_medicLine,_folderPath select [0,3]], player,false,getPosASL player,5,1,75];
+				};
 			};
+			missionNamespace setVariable ["MAZ_EP_CC_loopTime",time + MAZ_EP_CC_delayToCallMedic];
 		};
 
 		MAZ_callOutReload = {
@@ -400,335 +399,434 @@ private _value = (str {
 		};
 
 		MAZ_changeVoiceAndFace = {
-			while {MAZ_EP_CC_combatCalloutsEnabled} do {
-				private _world = worldName;
-				private _americanVoice = [
-					"Male01ENG",
-					"Male02ENG",
-					"Male03ENG",
-					"Male04ENG",
-					"Male05ENG",
-					"Male06ENG",
-					"Male07ENG",
-					"Male08ENG",
-					"Male09ENG",
-					"Male10ENG",
-					"Male11ENG",
-					"Male12ENG"
-				] apply {toLower _x};
-				private _britishVoice = [
-					"Male01ENGB",
-					"Male02ENGB",
-					"Male03ENGB",
-					"Male04ENGB",
-					"Male05ENGB"
-				] apply {toLower _x};
-				private _altianVoice = [
-					"Male01GRE",
-					"Male02GRE",
-					"Male03GRE",
-					"Male04GRE",
-					"Male05GRE",
-					"Male06GRE"
-				] apply {toLower _x};
-				private _chineseVoice = [
-					"Male01CHI",
-					"Male02CHI",
-					"Male03CHI"
-				] apply {toLower _x};
-				private _persianVoice = [
-					"Male01PER",
-					"Male02PER",
-					"Male03PER"
-				] apply {toLower _x};
-				private _frenchVoice = [
-					"Male01FRE",
-					"Male02FRE",
-					"Male03FRE"
-				] apply {toLower _x};
-				private _frenchEnglishVoice = [
-					"Male01ENGFRE",
-					"Male02ENGFRE"
-				] apply {toLower _x};
-				private _polishVoice = [
-					"Male01POL",
-					"Male02POL",
-					"Male03POL"
-				] apply {toLower _x};
-				private _russianVoice = [
-					"Male01RUS",
-					"Male02RUS",
-					"Male03RUS"
-				] apply {toLower _x};
+			if(!MAZ_EP_CC_combatCalloutsEnabled) exitWith {};
+			if(time < (missionNamespace getVariable ["MAZ_EP_CC_faceLoopTime",time])) exitWith {};
+			private _world = worldName;
+			private _americanVoice = [
+				"Male01ENG",
+				"Male02ENG",
+				"Male03ENG",
+				"Male04ENG",
+				"Male05ENG",
+				"Male06ENG",
+				"Male07ENG",
+				"Male08ENG",
+				"Male09ENG",
+				"Male10ENG",
+				"Male11ENG",
+				"Male12ENG"
+			] apply {toLower _x};
+			private _britishVoice = [
+				"Male01ENGB",
+				"Male02ENGB",
+				"Male03ENGB",
+				"Male04ENGB",
+				"Male05ENGB"
+			] apply {toLower _x};
+			private _altianVoice = [
+				"Male01GRE",
+				"Male02GRE",
+				"Male03GRE",
+				"Male04GRE",
+				"Male05GRE",
+				"Male06GRE"
+			] apply {toLower _x};
+			private _chineseVoice = [
+				"Male01CHI",
+				"Male02CHI",
+				"Male03CHI"
+			] apply {toLower _x};
+			private _persianVoice = [
+				"Male01PER",
+				"Male02PER",
+				"Male03PER"
+			] apply {toLower _x};
+			private _frenchVoice = [
+				"Male01FRE",
+				"Male02FRE",
+				"Male03FRE"
+			] apply {toLower _x};
+			private _frenchEnglishVoice = [
+				"Male01ENGFRE",
+				"Male02ENGFRE"
+			] apply {toLower _x};
+			private _polishVoice = [
+				"Male01POL",
+				"Male02POL",
+				"Male03POL"
+			] apply {toLower _x};
+			private _russianVoice = [
+				"Male01RUS",
+				"Male02RUS",
+				"Male03RUS"
+			] apply {toLower _x};
 
-				private _whiteHeads = [
-					"WhiteHead_01",
-					"WhiteHead_02",
-					"WhiteHead_03",
-					"WhiteHead_04",
-					"WhiteHead_05",
-					"WhiteHead_06",
-					"WhiteHead_07",
-					"WhiteHead_08",
-					"WhiteHead_09",
-					"WhiteHead_10",
-					"WhiteHead_11",
-					"WhiteHead_12",
-					"WhiteHead_13",
-					"WhiteHead_14",
-					"WhiteHead_15",
-					"WhiteHead_16",
-					"WhiteHead_17",
-					"WhiteHead_18",
-					"WhiteHead_19",
-					"WhiteHead_20",
-					"WhiteHead_21",
-					"WhiteHead_22_a",
-					"WhiteHead_22_l",
-					"WhiteHead_22_sa",
-					"WhiteHead_23",
-					"WhiteHead_24",
-					"WhiteHead_25",
-					"WhiteHead_26",
-					"WhiteHead_27",
-					"WhiteHead_28",
-					"WhiteHead_29",
-					"WhiteHead_30",
-					"WhiteHead_31",
-					"WhiteHead_32"
-				];
-				private _altianHeads = [
-					"GreekHead_A3_01",
-					"GreekHead_A3_02",
-					"GreekHead_A3_03",
-					"GreekHead_A3_04",
-					"GreekHead_A3_05",
-					"GreekHead_A3_06",
-					"GreekHead_A3_07",
-					"GreekHead_A3_08",
-					"GreekHead_A3_09",
-					"GreekHead_A3_11",
-					"GreekHead_A3_12",
-					"GreekHead_A3_13",
-					"GreekHead_A3_14",
-					"GreekHead_A3_10_a",
-					"GreekHead_A3_10_sa",
-					"GreekHead_A3_10_l"
-				];
-				private _persianHeads = [
-					"PersianHead_A3_01",
-					"PersianHead_A3_02",
-					"PersianHead_A3_03",
-					"PersianHead_A3_04_a",
-					"PersianHead_A3_04_sa",
-					"PersianHead_A3_04_l"
-				];
-				private _chineseHead = [
-					"AsianHead_A3_01",
-					"AsianHead_A3_02",
-					"AsianHead_A3_03",
-					"AsianHead_A3_04",
-					"AsianHead_A3_05",
-					"AsianHead_A3_06",
-					"AsianHead_A3_07",
-					"PersianHead_A3_04_a",
-					"PersianHead_A3_04_sa",
-					"PersianHead_A3_04_l"
-				];
-				private _tanoanHead = [
-					"TanoanHead_A3_01",
-					"TanoanHead_A3_02",
-					"TanoanHead_A3_03",
-					"TanoanHead_A3_04",
-					"TanoanHead_A3_05",
-					"TanoanHead_A3_06",
-					"TanoanHead_A3_07",
-					"TanoanHead_A3_08",
-					"TanoanHead_A3_09",
-					"PersianHead_A3_04_a",
-					"PersianHead_A3_04_sa",
-					"PersianHead_A3_04_l"
-				];
-				private _polishHead = [
-					"LivonianHead_1",
-					"LivonianHead_2",
-					"LivonianHead_3",
-					"LivonianHead_4",
-					"LivonianHead_5",
-					"LivonianHead_6",
-					"LivonianHead_7",
-					"LivonianHead_8",
-					"LivonianHead_9",
-					"LivonianHead_10",
-					"WhiteHead_22_a",
-					"WhiteHead_22_l",
-					"WhiteHead_22_sa"
-				];
-				private _russianHead = [
-					"RussianHead_1",
-					"RussianHead_2",
-					"RussianHead_3",
-					"RussianHead_4",
-					"RussianHead_5",
-					"WhiteHead_22_a",
-					"WhiteHead_22_l",
-					"WhiteHead_22_sa"
-				];
+			private _whiteHeads = [
+				"WhiteHead_01",
+				"WhiteHead_02",
+				"WhiteHead_03",
+				"WhiteHead_04",
+				"WhiteHead_05",
+				"WhiteHead_06",
+				"WhiteHead_07",
+				"WhiteHead_08",
+				"WhiteHead_09",
+				"WhiteHead_10",
+				"WhiteHead_11",
+				"WhiteHead_12",
+				"WhiteHead_13",
+				"WhiteHead_14",
+				"WhiteHead_15",
+				"WhiteHead_16",
+				"WhiteHead_17",
+				"WhiteHead_18",
+				"WhiteHead_19",
+				"WhiteHead_20",
+				"WhiteHead_21",
+				"WhiteHead_22_a",
+				"WhiteHead_22_l",
+				"WhiteHead_22_sa",
+				"WhiteHead_23",
+				"WhiteHead_24",
+				"WhiteHead_25",
+				"WhiteHead_26",
+				"WhiteHead_27",
+				"WhiteHead_28",
+				"WhiteHead_29",
+				"WhiteHead_30",
+				"WhiteHead_31",
+				"WhiteHead_32",
+				"Miller",
+				"Kerry",
+				"Kerry_A_F",
+				"Kerry_B1_F",
+				"Kerry_B2_F",
+				"Kerry_C_F",
+				"Jay",
+				"Ivan",
+				"Pettka",
+				"Dwarden",
+				"Hladas",
+				"CamoHead_White_01_F",
+				"CamoHead_White_02_F",
+				"CamoHead_White_03_F",
+				"CamoHead_White_04_F",
+				"CamoHead_White_05_F",
+				"CamoHead_White_06_F",
+				"CamoHead_White_07_F",
+				"CamoHead_White_08_F",
+				"CamoHead_White_09_F",
+				"CamoHead_White_10_F",
+				"CamoHead_White_11_F",
+				"CamoHead_White_12_F",
+				"CamoHead_White_13_F",
+				"CamoHead_White_14_F",
+				"CamoHead_White_15_F",
+				"CamoHead_White_16_F",
+				"CamoHead_White_17_F",
+				"CamoHead_White_18_F",
+				"CamoHead_White_19_F",
+				"CamoHead_White_20_F",
+				"CamoHead_White_21_F",
+				"CamoHead_African_01_F",
+				"CamoHead_African_02_F",
+				"CamoHead_African_03_F",
+				"AfricanHead_01",
+				"AfricanHead_02",
+				"AfricanHead_03"
+			];
+			private _altianHeads = [
+				"GreekHead_A3_01",
+				"GreekHead_A3_02",
+				"GreekHead_A3_03",
+				"GreekHead_A3_04",
+				"GreekHead_A3_05",
+				"GreekHead_A3_06",
+				"GreekHead_A3_07",
+				"GreekHead_A3_08",
+				"GreekHead_A3_09",
+				"GreekHead_A3_11",
+				"GreekHead_A3_12",
+				"GreekHead_A3_13",
+				"GreekHead_A3_14",
+				"GreekHead_A3_10_a",
+				"GreekHead_A3_10_sa",
+				"GreekHead_A3_10_l",
+				"IG_Leader",
+				"CamoHead_Greek_01_F",
+				"CamoHead_Greek_02_F",
+				"CamoHead_Greek_03_F",
+				"CamoHead_Greek_04_F",
+				"CamoHead_Greek_05_F",
+				"CamoHead_Greek_06_F",
+				"CamoHead_Greek_07_F",
+				"CamoHead_Greek_08_F",
+				"CamoHead_Greek_09_F"
+			];
+			private _persianHeads = [
+				"PersianHead_A3_01",
+				"PersianHead_A3_02",
+				"PersianHead_A3_03",
+				"PersianHead_A3_04_a",
+				"PersianHead_A3_04_sa",
+				"PersianHead_A3_04_l",
+				"O_Colonel",
+				"CamoHead_Persian_01_F",
+				"CamoHead_Persian_02_F",
+				"CamoHead_Persian_03_F"
+			];
+			private _chineseHead = [
+				"AsianHead_A3_01",
+				"AsianHead_A3_02",
+				"AsianHead_A3_03",
+				"AsianHead_A3_04",
+				"AsianHead_A3_05",
+				"AsianHead_A3_06",
+				"AsianHead_A3_07",
+				"PersianHead_A3_04_a",
+				"PersianHead_A3_04_sa",
+				"PersianHead_A3_04_l",
+				"CamoHead_Asian_01_F",
+				"CamoHead_Asian_02_F",
+				"CamoHead_Asian_03_F"
+			];
+			private _tanoanHead = [
+				"TanoanHead_A3_01",
+				"TanoanHead_A3_02",
+				"TanoanHead_A3_03",
+				"TanoanHead_A3_04",
+				"TanoanHead_A3_05",
+				"TanoanHead_A3_06",
+				"TanoanHead_A3_07",
+				"TanoanHead_A3_08",
+				"TanoanHead_A3_09",
+				"PersianHead_A3_04_a",
+				"PersianHead_A3_04_sa",
+				"PersianHead_A3_04_l",
+				"CamoHead_African_01_F",
+				"CamoHead_African_02_F",
+				"CamoHead_African_03_F",
+				"TanoanBossHead"
+			];
+			private _polishHead = [
+				"LivonianHead_1",
+				"LivonianHead_2",
+				"LivonianHead_3",
+				"LivonianHead_4",
+				"LivonianHead_5",
+				"LivonianHead_6",
+				"LivonianHead_7",
+				"LivonianHead_8",
+				"LivonianHead_9",
+				"LivonianHead_10",
+				"WhiteHead_22_a",
+				"WhiteHead_22_l",
+				"WhiteHead_22_sa",
+				"CamoHead_White_01_F",
+				"CamoHead_White_02_F",
+				"CamoHead_White_03_F",
+				"CamoHead_White_04_F",
+				"CamoHead_White_05_F",
+				"CamoHead_White_06_F",
+				"CamoHead_White_07_F",
+				"CamoHead_White_08_F",
+				"CamoHead_White_09_F",
+				"CamoHead_White_10_F",
+				"CamoHead_White_11_F",
+				"CamoHead_White_12_F",
+				"CamoHead_White_13_F",
+				"CamoHead_White_14_F",
+				"CamoHead_White_15_F",
+				"CamoHead_White_16_F",
+				"CamoHead_White_17_F",
+				"CamoHead_White_18_F",
+				"CamoHead_White_19_F",
+				"CamoHead_White_20_F",
+				"CamoHead_White_21_F"
+			];
+			private _russianHead = [
+				"RussianHead_1",
+				"RussianHead_2",
+				"RussianHead_3",
+				"RussianHead_4",
+				"RussianHead_5",
+				"WhiteHead_22_a",
+				"WhiteHead_22_l",
+				"WhiteHead_22_sa",
+				"CamoHead_White_01_F",
+				"CamoHead_White_02_F",
+				"CamoHead_White_03_F",
+				"CamoHead_White_04_F",
+				"CamoHead_White_05_F",
+				"CamoHead_White_06_F",
+				"CamoHead_White_07_F",
+				"CamoHead_White_08_F",
+				"CamoHead_White_09_F",
+				"CamoHead_White_10_F",
+				"CamoHead_White_11_F",
+				"CamoHead_White_12_F",
+				"CamoHead_White_13_F",
+				"CamoHead_White_14_F",
+				"CamoHead_White_15_F",
+				"CamoHead_White_16_F",
+				"CamoHead_White_17_F",
+				"CamoHead_White_18_F",
+				"CamoHead_White_19_F",
+				"CamoHead_White_20_F",
+				"CamoHead_White_21_F"
+			];
 
-				if(_world == "Altis" || _world == "Stratis" || _world == "VR") then {
-					switch (side (group player)) do {
-						case west: {
-							if((!(speaker player in _americanVoice)) && (!(speaker player in _britishVoice))) then {
-								[player,selectRandom _americanVoice] remoteExec ['setSpeaker'];
-							};
-							if(!(face player in _whiteHeads)) then {
-								[player,selectRandom _whiteHeads] remoteExec ['setFace'];
-							};
+			if(_world == "Altis" || _world == "Stratis" || _world == "VR") then {
+				switch (side (group player)) do {
+					case west: {
+						if((!(speaker player in _americanVoice)) && (!(speaker player in _britishVoice))) then {
+							[player,selectRandom _americanVoice] remoteExec ['setSpeaker'];
 						};
-						case east: {
-							if(!(speaker player in _persianVoice)) then {
-								[player,selectRandom _persianVoice] remoteExec ['setSpeaker'];
-							};
-							if(!(face player in _persianHeads)) then {
-								[player,selectRandom _persianHeads] remoteExec ['setFace'];
-							};
+						if(!(face player in _whiteHeads)) then {
+							[player,selectRandom _whiteHeads] remoteExec ['setFace'];
 						};
-						case independent: {
-							if(!(speaker player in _altianVoice)) then {
-								[player,selectRandom _altianVoice] remoteExec ['setSpeaker'];
-							};
-							if(!(face player in _altianHeads)) then {
-								[player,selectRandom _altianHeads] remoteExec ['setFace'];
-							};
+					};
+					case east: {
+						if(!(speaker player in _persianVoice)) then {
+							[player,selectRandom _persianVoice] remoteExec ['setSpeaker'];
 						};
-						case civilian: {
-							if(!(speaker player in _altianVoice)) then {
-								[player,selectRandom _altianVoice] remoteExec ['setSpeaker'];
-							};
-							if(!(face player in _altianHeads)) then {
-								[player,selectRandom _altianHeads] remoteExec ['setFace'];
-							};
+						if(!(face player in _persianHeads)) then {
+							[player,selectRandom _persianHeads] remoteExec ['setFace'];
+						};
+					};
+					case independent: {
+						if(!(speaker player in _altianVoice)) then {
+							[player,selectRandom _altianVoice] remoteExec ['setSpeaker'];
+						};
+						if(!(face player in _altianHeads)) then {
+							[player,selectRandom _altianHeads] remoteExec ['setFace'];
+						};
+					};
+					case civilian: {
+						if(!(speaker player in _altianVoice)) then {
+							[player,selectRandom _altianVoice] remoteExec ['setSpeaker'];
+						};
+						if(!(face player in _altianHeads)) then {
+							[player,selectRandom _altianHeads] remoteExec ['setFace'];
 						};
 					};
 				};
-				if(_world == "Malden") then {
-					switch (side (group player)) do {
-						case west: {
-							if((!(speaker player in _americanVoice)) && (!(speaker player in _britishVoice)) && (!(speaker player in _frenchVoice)) && (!(speaker player in _frenchEnglishVoice))) then {
-								[player,selectRandom _americanVoice] remoteExec ['setSpeaker'];
-							};
-							if(!(face player in _whiteHeads)) then {
-								[player,selectRandom _whiteHeads] remoteExec ['setFace'];
-							};
-						};
-						case east: {
-							if(!(speaker player in _chineseVoice)) then {
-								[player,selectRandom _chineseVoice] remoteExec ['setSpeaker'];
-							};
-							if(!(face player in _chineseHead)) then {
-								[player,selectRandom _chineseHead] remoteExec ['setFace'];
-							};
-						};
-						case independent: {
-							if((!(speaker player in _frenchVoice)) && (!(speaker player in _frenchEnglishVoice))) then {
-								[player,selectRandom _frenchVoice] remoteExec ['setSpeaker'];
-							};
-							if(!(face player in _whiteHeads)) then {
-								[player,selectRandom _whiteHeads] remoteExec ['setFace'];
-							};
-						};
-						case civilian: {
-							if((!(speaker player in _frenchVoice)) && (!(speaker player in _frenchEnglishVoice))) then {
-								[player,selectRandom _frenchVoice] remoteExec ['setSpeaker'];
-							};
-							if(!(face player in _whiteHeads)) then {
-								[player,selectRandom _whiteHeads] remoteExec ['setFace'];
-							};
-						};
-					};
-				};
-				if(_world == "Tanoa") then {
-					switch (side (group player)) do {
-						case west: {
-							if((!(speaker player in _americanVoice)) && (!(speaker player in _britishVoice)) && (!(speaker player in _frenchVoice)) && (!(speaker player in _frenchEnglishVoice))) then {
-								[player,selectRandom _americanVoice] remoteExec ['setSpeaker'];
-							};
-							if(!(face player in _whiteHeads)) then {
-								[player,selectRandom _whiteHeads] remoteExec ['setFace'];
-							};
-						};
-						case east: {
-							if(!(speaker player in _chineseVoice)) then {
-								[player,selectRandom _chineseVoice] remoteExec ['setSpeaker'];
-							};
-							if(!(face player in _chineseHead)) then {
-								[player,selectRandom _chineseHead] remoteExec ['setFace'];
-							};
-						};
-						case independent: {
-							if((!(speaker player in _frenchVoice)) && (!(speaker player in _frenchEnglishVoice))) then {
-								[player,selectRandom _frenchVoice] remoteExec ['setSpeaker'];
-							};
-							if(!(face player in _tanoanHead)) then {
-								[player,selectRandom _tanoanHead] remoteExec ['setFace'];
-							};
-						};
-						case civilian: {
-							if((!(speaker player in _frenchVoice)) && (!(speaker player in _frenchEnglishVoice))) then {
-								[player,selectRandom _frenchVoice] remoteExec ['setSpeaker'];
-							};
-							if(!(face player in _tanoanHead)) then {
-								[player,selectRandom _tanoanHead] remoteExec ['setFace'];
-							};
-						};
-					};
-				};
-				if(_world == "Enoch") then {
-					switch (side (group player)) do {
-						case west: {
-							if((!(speaker player in _americanVoice)) && (!(speaker player in _britishVoice)) && (!(speaker player in _polishVoice))) then {
-								[player,selectRandom _americanVoice] remoteExec ['setSpeaker'];
-							};
-							if(!(face player in _whiteHeads)) then {
-								[player,selectRandom _whiteHeads] remoteExec ['setFace'];
-							};
-						};
-						case east: {
-							if(!(speaker player in _russianVoice)) then {
-								[player,selectRandom _russianVoice] remoteExec ['setSpeaker'];
-							};
-							if(!(face player in _russianHead)) then {
-								[player,selectRandom _russianHead] remoteExec ['setFace'];
-							};
-						};
-						case independent: {
-							if(!(speaker player in _polishVoice)) then {
-								[player,selectRandom _polishVoice] remoteExec ['setSpeaker'];
-							};
-							if(!(face player in _polishHead)) then {
-								[player,selectRandom _polishHead] remoteExec ['setFace'];
-							};
-						};
-						case civilian: {
-							if(!(speaker player in _polishVoice)) then {
-								[player,selectRandom _polishVoice] remoteExec ['setSpeaker'];
-							};
-							if(!(face player in _polishHead)) then {
-								[player,selectRandom _polishHead] remoteExec ['setFace'];
-							};
-						};
-					};
-				};
-				sleep 3;
 			};
+			if(_world == "Malden") then {
+				switch (side (group player)) do {
+					case west: {
+						if((!(speaker player in _americanVoice)) && (!(speaker player in _britishVoice)) && (!(speaker player in _frenchVoice)) && (!(speaker player in _frenchEnglishVoice))) then {
+							[player,selectRandom _americanVoice] remoteExec ['setSpeaker'];
+						};
+						if(!(face player in _whiteHeads)) then {
+							[player,selectRandom _whiteHeads] remoteExec ['setFace'];
+						};
+					};
+					case east: {
+						if(!(speaker player in _chineseVoice)) then {
+							[player,selectRandom _chineseVoice] remoteExec ['setSpeaker'];
+						};
+						if(!(face player in _chineseHead)) then {
+							[player,selectRandom _chineseHead] remoteExec ['setFace'];
+						};
+					};
+					case independent: {
+						if((!(speaker player in _frenchVoice)) && (!(speaker player in _frenchEnglishVoice))) then {
+							[player,selectRandom _frenchVoice] remoteExec ['setSpeaker'];
+						};
+						if(!(face player in _whiteHeads)) then {
+							[player,selectRandom _whiteHeads] remoteExec ['setFace'];
+						};
+					};
+					case civilian: {
+						if((!(speaker player in _frenchVoice)) && (!(speaker player in _frenchEnglishVoice))) then {
+							[player,selectRandom _frenchVoice] remoteExec ['setSpeaker'];
+						};
+						if(!(face player in _whiteHeads)) then {
+							[player,selectRandom _whiteHeads] remoteExec ['setFace'];
+						};
+					};
+				};
+			};
+			if(_world == "Tanoa") then {
+				switch (side (group player)) do {
+					case west: {
+						if((!(speaker player in _americanVoice)) && (!(speaker player in _britishVoice)) && (!(speaker player in _frenchVoice)) && (!(speaker player in _frenchEnglishVoice))) then {
+							[player,selectRandom _americanVoice] remoteExec ['setSpeaker'];
+						};
+						if(!(face player in _whiteHeads)) then {
+							[player,selectRandom _whiteHeads] remoteExec ['setFace'];
+						};
+					};
+					case east: {
+						if(!(speaker player in _chineseVoice)) then {
+							[player,selectRandom _chineseVoice] remoteExec ['setSpeaker'];
+						};
+						if(!(face player in _chineseHead)) then {
+							[player,selectRandom _chineseHead] remoteExec ['setFace'];
+						};
+					};
+					case independent: {
+						if((!(speaker player in _frenchVoice)) && (!(speaker player in _frenchEnglishVoice))) then {
+							[player,selectRandom _frenchVoice] remoteExec ['setSpeaker'];
+						};
+						if(!(face player in _tanoanHead)) then {
+							[player,selectRandom _tanoanHead] remoteExec ['setFace'];
+						};
+					};
+					case civilian: {
+						if((!(speaker player in _frenchVoice)) && (!(speaker player in _frenchEnglishVoice))) then {
+							[player,selectRandom _frenchVoice] remoteExec ['setSpeaker'];
+						};
+						if(!(face player in _tanoanHead)) then {
+							[player,selectRandom _tanoanHead] remoteExec ['setFace'];
+						};
+					};
+				};
+			};
+			if(_world == "Enoch") then {
+				switch (side (group player)) do {
+					case west: {
+						if((!(speaker player in _americanVoice)) && (!(speaker player in _britishVoice)) && (!(speaker player in _polishVoice))) then {
+							[player,selectRandom _americanVoice] remoteExec ['setSpeaker'];
+						};
+						if(!(face player in _whiteHeads)) then {
+							[player,selectRandom _whiteHeads] remoteExec ['setFace'];
+						};
+					};
+					case east: {
+						if(!(speaker player in _russianVoice)) then {
+							[player,selectRandom _russianVoice] remoteExec ['setSpeaker'];
+						};
+						if(!(face player in _russianHead)) then {
+							[player,selectRandom _russianHead] remoteExec ['setFace'];
+						};
+					};
+					case independent: {
+						if(!(speaker player in _polishVoice)) then {
+							[player,selectRandom _polishVoice] remoteExec ['setSpeaker'];
+						};
+						if(!(face player in _polishHead)) then {
+							[player,selectRandom _polishHead] remoteExec ['setFace'];
+						};
+					};
+					case civilian: {
+						if(!(speaker player in _polishVoice)) then {
+							[player,selectRandom _polishVoice] remoteExec ['setSpeaker'];
+						};
+						if(!(face player in _polishHead)) then {
+							[player,selectRandom _polishHead] remoteExec ['setFace'];
+						};
+					};
+				};
+			};
+			missionNamespace setVariable ["MAZ_EP_CC_faceLoopTime",time + 1];
 		};
 
 		MAZ_fnc_detectNadeLoop = {
-			while {MAZ_EP_CoreEnabled} do {
-				if(!MAZ_EP_CC_combatCalloutsEnabled || !MAZ_EP_CC_callNadeToggle) exitWith {sleep 1;};
-				call MAZ_fnc_detectEnemyGrenade;
-				sleep 1;
-			};
+			if(time < (missionNamespace getVariable ["MAZ_EP_CC_nadeLoopTime",time])) exitWith {};
+			call MAZ_fnc_detectEnemyGrenade;
+			missionNamespace setVariable ["MAZ_EP_CC_nadeLoopTime", time + 1];
 		};
 
 		MAZ_fnc_detectEnemyGrenade = {
@@ -875,10 +973,13 @@ private _value = (str {
 				};
 			};
 		}];
-
-		[] spawn MAZ_autoCallMedic;
-		[] spawn MAZ_fnc_detectNadeLoop;
-		[] spawn MAZ_changeVoiceAndFace;
+		
+		[] spawn {
+			waitUntil {!isNil "MAZ_EP_fnc_addFunctionToMainLoop"};
+			["MAZ_autoCallMedic"] call MAZ_EP_fnc_addFunctionToMainLoop;
+			["MAZ_fnc_detectNadeLoop"] call MAZ_EP_fnc_addFunctionToMainLoop;
+			["MAZ_changeVoiceAndFace"] call MAZ_EP_fnc_addFunctionToMainLoop;
+		};
 
 		MAZ_EP_CC_reloadCooldown = false;
 		if(!isNil "MAZ_Key_callReload") then {
