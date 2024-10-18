@@ -34,7 +34,7 @@ MAZ_EP_CoreEnabled = true;
 publicVariable "MAZ_EP_CoreEnabled";
 
 private _value = (str {
-	if(isNil "MAZ_keyAr" && isNil "MAZ_fnc_keybindCarrier") then {
+	if(isNil "MAZ_fnc_keybindCarrier") then {
 		MAZ_fnc_keybindCarrier = {
 			MAZ_isChangingKeybind = false;
 
@@ -1242,6 +1242,21 @@ private _value = (str {
 				comment "Otherwise prevent marker deletion";
 				true
 			}];
+
+			if(!isNil "MAZ_EH_WepAssembled_AutoTurrets") then {
+				player removeEventHandler ["WeaponAssembled",MAZ_EH_WepAssembled_AutoTurrets];
+			};
+			MAZ_EH_WepAssembled_AutoTurrets = player addEventHandler ["WeaponAssembled", {
+				params ["_unit", "_staticWeapon", "_primaryBag", "_secondaryBag"];
+				if(_staticWeapon isKindOf "StaticWeapon" || _staticWeapon isKindOf "UGV_02_Base_F") then {
+					{
+						private _unit = _x;
+						{
+							_unit disableAI _x;
+						}forEach ["ANIM","AUTOTARGET","CHECKVISIBLE","FSM","MOVE","PATH","TARGET","WEAPONAIM"]
+					}forEach (crew _staticWeapon);
+				};
+			}];
 		};
 
 		MAZ_fnc_initDefaultAddonServer = {
@@ -1275,27 +1290,25 @@ private _value = (str {
 		};
 
 		MAZ_fnc_removeTrollBackpacks = {
-			while {MAZ_EP_CoreEnabled} do {
-				comment "Prevent pistol whippers";
-				if(!(missionNamespace getVariable ["MAZ_BetterSprint",false])) then {
-					if(currentWeapon player == handgunWeapon player && weaponLowered player && stance player == "CROUCH") then {
-						player setAnimSpeedCoef 0.8;
-					} else {
-						player setAnimSpeedCoef 1;
-					};
+			if(time < (missionNamespace getVariable ["MAZ_EP_trollBagsLoopTime",time])) exitWith {};
+			comment "Prevent pistol whippers";
+			if(!(missionNamespace getVariable ["MAZ_BetterSprint",false])) then {
+				if(currentWeapon player == handgunWeapon player && weaponLowered player && stance player == "CROUCH") then {
+					player setAnimSpeedCoef 0.8;
+				} else {
+					player setAnimSpeedCoef 1;
 				};
+			};
 
-				comment "Prevent respawn bags and turrets";
+			comment "Prevent respawn bags and turrets";
+			if(missionNamespace getVariable ["MAZ_EP_DisableRespawnTents",false]) then {
 				private _bp = backpack player;
 				if("respawn" in (toLower _bp)) then {
 					removeBackpackGlobal player;
 					continue;
 				};
-				if(_bp isKindOf "Weapon_Bag_Base") then {
-
-				};
-				sleep 0.5;
 			};
+			missionNamespace setVariable ["MAZ_EP_trollBagsLoopTime",time + 0.1];
 		};
 
 		MAZ_EP_fnc_createBaseDiary = {
@@ -1471,6 +1484,47 @@ private _value = (str {
 				};
 				uiSleep 0.1;
 			};
+		};
+
+		MAZ_EP_fnc_addCamoFacesToArsenal = {
+			if(!isNil "MAZ_SEH_arsenalOpened_CamoFaces") then {
+				[missionNamespace,"arsenalOpened",MAZ_SEH_arsenalOpened_CamoFaces] call BIS_fnc_removeScriptedEventHandler;
+			};
+			MAZ_SEH_arsenalOpened_CamoFaces = [missionNamespace, "arsenalOpened", {
+				params ["_display","_togglespace"];
+
+				with uiNamespace do {
+					private _face = 15;
+					private _ctrlList = _display displayCtrl (960 + 15);
+					{
+						_x params ["_faceType","_number"];
+						for "_i" from 1 to _number do {
+							private _strI = if(_i < 10) then {"0" + (str _i)} else {str _i};
+							private _camoFaceClass = format ["CamoHead_%1_%2_F",_faceType,_strI];
+							private _normalHead = if(_faceType in ["Persian","Greek","Asian"]) then {
+								format ["%1Head_A3_%2",_faceType,_strI];
+							} else {
+								format ["%1Head_%2",_faceType,_strI];
+							};
+							private _displayName = getText (configfile >> "CfgFaces" >> "Man_A3" >> _normalHead >> "DisplayName");
+							_displayName = _displayName + " (Camo)";
+							
+							private _lbAdd = _ctrlList lbAdd _displayName;
+							_ctrlList lbSetdata [_lbAdd, _camoFaceClass];
+							_ctrlList lbSetTooltip [_lbAdd, format ["%1\n%2",_displayName,_camoFaceClass]];
+						};
+					}forEach [
+						["White",21],
+						["Greek",9],
+						["Asian",3],
+						["Persian",3],
+						["African",3]
+					];
+					private _ctrlSort = _display displayctrl (800 + 15);
+					private _sortValues = uinamespace getvariable ["bis_fnc_arsenal_sort",[]];
+					["lbSort",[[_ctrlSort,_sortValues param [15,0]],15]] call bis_fnc_arsenal;
+				};
+			}] call BIS_fnc_addScriptedEventHandler;
 		};
 
 		comment "User Actions System";
@@ -1711,6 +1765,32 @@ private _value = (str {
 				MAZ_EP_userActionsShown = false;
 				call MAZ_EP_fnc_destroyUserActions;
 			}];
+
+		comment "Stackable inGameUISetEventHandler System";
+			MAZ_EP_StackedUIEHs = [];
+
+			MAZ_EP_fnc_callInGameUIEHs = {
+				private _result = false;
+				{
+					private _resultTemp = false;
+					if(typeName _x == typeName "") then {
+						private _fnc = missionNamespace getVariable [_x,{}];
+						_resultTemp = _this call _fnc;
+					};
+					if(typeName _x == typeName {}) then {
+						_resultTemp = _this call _x;	
+					};
+					if(_resultTemp) exitWith {_result = true};
+				}forEach MAZ_EP_StackedUIEHs;
+				_result;
+			};
+
+			MAZ_EP_fnc_addInGameUIEH = {
+				params [["_function",{},["",{}]]];
+				MAZ_EP_StackedUIEHs pushBack _function;
+			};
+
+			'inGameUISetEventHandler ["Action",MAZ_EP_fnc_callInGameUIEHs]';
 
 		comment "Settings System";
 
@@ -2048,8 +2128,42 @@ private _value = (str {
 				systemChat format ["System failed %1 times. Succeeded %2 times.",_failCount,_succCount];
 			};
 
+		comment "Enhancement Pack Loop";
+
+			MAZ_EP_fnc_mainLoop = {
+				while {sleep 0.01;MAZ_EP_CoreEnabled} do {
+					{
+						private _fnc = missionNamespace getVariable [_x,{}];
+						call _fnc;
+					}forEach (missionNamespace getVariable ["MAZ_EP_loopFunctions",[]]);
+				};
+			};
+
+			MAZ_EP_fnc_addFunctionToMainLoop = {
+				params [["_functionName","",[""]]];
+				if(_functionName == "") exitWith {false};
+				if(typeName (missionNamespace getVariable [_functionName,""]) != typeName {}) exitWith {false};
+				private _val = missionNamespace getVariable ["MAZ_EP_loopFunctions",[]];
+				_val pushBack _functionName;
+				missionNamespace setVariable ["MAZ_EP_loopFunctions",_val];
+				true;
+			};
+
+			MAZ_EP_fnc_removeFunctionFromMainLoop = {
+				params [["_functionName","",[""]]];
+				if(_functionName == "") exitWith {false};
+				if(typeName (missionNamespace getVariable [_functionName,""]) != typeName {}) exitWith {false};
+				private _val = missionNamespace getVariable ["MAZ_EP_loopFunctions",[]];
+				_val deleteAt (_val find _functionName);
+				missionNamespace setVariable ["MAZ_EP_loopFunctions",_val];
+				true;
+			};
+
+			["MAZ_fnc_removeTrollBackpacks"] call MAZ_EP_fnc_addFunctionToMainLoop;
+
 		call MAZ_EP_fnc_initSettings;
 		call MAZ_EP_fnc_createBaseDiary;
+		call MAZ_EP_fnc_addCamoFacesToArsenal;
 		["Core Pack","The Enhancement Pack Core adds the base functionality required for the rest of the EP. This adds the keybind framework and various other systems. To see all keybinds available, press CTRL + 0 (on your main keyboard)."] spawn MAZ_EP_fnc_addDiaryRecord;
 		
 		[] spawn MAZ_EP_fnc_event_onNotificationCountChanged;
@@ -2062,15 +2176,15 @@ private _value = (str {
 		["Z.A.M. Server Enhancement Pack running!","addItemOk"] call MAZ_EP_fnc_systemMessage;
 		[] spawn MAZ_fnc_globalLaserMarkers;
 		[] spawn MAZ_fnc_addKeybinds;
-		[] spawn MAZ_fnc_removeTrollBackpacks;
 
 		enableSentences false;
 		enableRadio false;
-		disableMapIndicators [true, true, true, false];
+		disableMapIndicators [false, true, true, false];
 
 		if(isServer) then {
 			call MAZ_fnc_initDefaultAddonServer;
 		};
+		[] spawn MAZ_EP_fnc_mainLoop;
 	};
 	call MAZ_EP_fnc_coreInit;
 }) splitString "";
@@ -2094,6 +2208,11 @@ missionNamespace setVariable [_varName,_value,true];
 [] spawn {
 	waitUntil {!isNil "MAZ_EP_fnc_addNewSetting"};
 	["Auto HALO Altitude","The altitude at which players will be automatically equipped with a parachute.","MAZ_EP_autoHALOHeight",1000,"SLIDER",[300,2000]] call MAZ_EP_fnc_addNewSetting;
+	["Disable Respawn Tents","Whether to remove respawn tents from player loadouts.","MAZ_EP_DisableRespawnTents",true,"TOGGLE",[]] call MAZ_EP_fnc_addNewSetting;
 };
 
 comment "Add faster swimming";
+
+comment "
+Reduce the number of while loops within Enhancement Pack. Make a general while loop for Enhancement Pack and have a system to add functions to it.
+";
