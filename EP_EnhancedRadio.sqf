@@ -125,36 +125,41 @@ private _value = (str {
 		};
 
 		MAZ_fnc_radioRequirement = {
-			while {MAZ_EP_CoreEnabled} do {
-				if(!MAZ_EP_enhancedRadioEnabled) exitWith {};
-				if ("ItemRadio" in assignedItems player) then {
-					0 enableChannel [true,true];
-					1 enableChannel [true,true];
-					2 enableChannel [true,true];
-					3 enableChannel [true,true];
+			if(!MAZ_EP_enhancedRadioEnabled) exitWith {
+				0 enableChannel true;
+				1 enableChannel true;
+				2 enableChannel true;
+				3 enableChannel true;
+				["MAZ_fnc_radioRequirement"] call MAZ_EP_fnc_removeFunctionFromMainLoop;
+			};
+			if(time < (missionNamespace getVariable ["MAZ_EP_ER_radioCheckLoopTime",time])) exitWith {};
+			if ("ItemRadio" in assignedItems player) then {
+				0 enableChannel true;
+				1 enableChannel true;
+				2 enableChannel true;
+				3 enableChannel true;
+			} else {
+				0 enableChannel [true,false];
+				1 enableChannel [true,false]; 
+				2 enableChannel [true,false];
+				3 enableChannel [true,false];
+			};
+			
+			if(MAZ_EP_enhancedRadioLeaderOnly) then {
+				private _grpPlyr = group player;
+				private _ldrGrp = leader _grpPlyr;
+
+				if(_ldrGrp == player) then {
+					0 enableChannel true;
+					1 enableChannel true;
+					2 enableChannel true;
 				} else {
 					0 enableChannel [true,false];
-					1 enableChannel [true,false]; 
+					1 enableChannel [true,false];
 					2 enableChannel [true,false];
-					3 enableChannel [true,false];
 				};
-				
-				if(MAZ_EP_enhancedRadioLeaderOnly) then {
-					private _grpPlyr = group player;
-					private _ldrGrp = leader _grpPlyr;
-
-					if(_ldrGrp == player) then {
-						0 enableChannel [true,true];
-						1 enableChannel [true,true];
-						2 enableChannel [true,true];
-					} else {
-						0 enableChannel [true,false];
-						1 enableChannel [true,false];
-						2 enableChannel [true,false];
-					};
-				};
-				sleep 1;
 			};
+			missionNamespace setVariable ["MAZ_EP_ER_radioCheckLoopTime",time + 1];
 		};
 
 		MAZ_fnc_startRadioCooldown = {
@@ -190,7 +195,8 @@ private _value = (str {
 				[] spawn MAZ_fnc_radioOut;
 			};
 		"];
-		[] spawn MAZ_fnc_radioRequirement;
+		waitUntil {!isNil "MAZ_EP_fnc_addFunctionToMainLoop"};
+		["MAZ_fnc_radioRequirement"] call MAZ_EP_fnc_addFunctionToMainLoop;
 	};
 	[] spawn {
 		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_addDiaryRecord"};
