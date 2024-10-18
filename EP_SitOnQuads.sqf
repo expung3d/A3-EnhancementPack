@@ -37,10 +37,9 @@ private _value = (str {
 		private _settings = ["MAZ_SOQ"] call MAZ_EP_fnc_getSettingsFromSettingsGroup;
 		waitUntil {uiSleep 0.1; [_settings] call MAZ_EP_fnc_isSettingsGroupInitiliazed;};
 		MAZ_fnc_quadbikeServerLoop = {
-			while{MAZ_EP_CoreEnabled} do {
-				[] call MAZ_fnc_quadbikeServerInit;
-				sleep 1;
-			};
+			if(time < (missionNamespace getVariable ["MAZ_EP_SOQ_setupLoopTime",time])) exitWith {};
+			[] call MAZ_fnc_quadbikeServerInit;
+			missionNamespace setVariable ["MAZ_EP_SOQ_setupLoopTime",time + 0.1];
 		};
 		
 		MAZ_fnc_quadbikeServerInit = {
@@ -166,7 +165,8 @@ private _value = (str {
 		};
 
 		if(isServer) then {
-			[] spawn MAZ_fnc_quadbikeServerLoop;
+			waitUntil {!isNil "MAZ_EP_fnc_addFunctionToMainLoop"};
+			["MAZ_fnc_quadbikeServerLoop"] call MAZ_EP_fnc_addFunctionToMainLoop;
 		};
 	};
 	[] spawn {
