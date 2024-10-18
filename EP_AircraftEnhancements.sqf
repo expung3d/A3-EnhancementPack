@@ -533,10 +533,9 @@ private _value = (str {
 		oldVel = [0,0,0];
 
 		MAZ_AE_fnc_serverLoop = {
-			while {MAZ_EP_CoreEnabled} do {
-				call MAZ_AE_fnc_initLoop;
-				sleep 1.5;
-			};
+			if(time < (missionNamespace getVariable ["MAZ_AE_loopTime",time])) exitWith {};
+			call MAZ_AE_fnc_initLoop;
+			missionNamespace setVariable ["MAZ_AE_loopTime",time + 1.5];
 		};
 		
 		MAZ_AE_fnc_initLoop = {
@@ -1515,6 +1514,29 @@ private _value = (str {
 			[_plane,_lifetime,_size,_hVar,_hVarR,_gears,_offset,_offsetF];
 		};
 
+		MAZ_AE_fnc_getGForces = {
+			private _plane = vehicle player;
+			private _interval = 0.2; 
+			private _maxVirtualG = 5; 
+			private _minVirtualG = 2.5;
+			private _newVel = velocity _plane; 
+			private _accel = (_newVel vectorDiff oldVel) vectorMultiply (1 / _interval); 
+			private _currentGForce = (((_accel vectorDotProduct (vectorUp _plane)) / 11) max -10) min 10;
+
+			_currentGForce = (round (_currentGForce * 100)) / 100;
+
+			private _average = 0;
+			private _count = {_average = _average + _x; true} count GForces;
+			if(_count > 0) then {
+				_average = _average/_count;
+			};
+
+			private _gBlackOut = _maxVirtualG / 0.55 + _maxVirtualG / 1 - _maxVirtualG;
+			private _strength = ((_average - 0.30 * _gBlackOut) / (0.70 * _gBlackOut)) max 0;
+
+			[_currentGForce,_strength];
+		};
+
 		MAZ_AE_fnc_gForce = {
 			params ["_plane"];
 			private _cfg = configFile >> "CfgVehicles" >> typeOf _plane;
@@ -1554,12 +1576,11 @@ private _value = (str {
 				call MAZ_AE_fnc_removeDisableControlOverG;
 			}';
 			if(_average > 0.30 * _gBlackOut) then {
-				_strength = ((_average - 0.30 * _gBlackOut) / (0.70 * _gBlackOut)) max 0;
 				GForces_Filter ppEffectAdjust [1,1,0,[0,0,0,1],[0,0,0,0],[1,1,1,1],[2 * (1 - _strength),(1 - _strength),0,0,0,0.1,0.5]];
 				if(_strength > 0.77) then {
 					call MAZ_AE_fnc_disableControlOverG;
 				} else {
-					if(_strength < 0.63) then {
+					if(_strength < 0.70) then {
 						call MAZ_AE_fnc_removeDisableControlOverG;
 					};
 				};
@@ -1890,7 +1911,8 @@ private _value = (str {
 		};
 
 		if(isServer) then {
-			[] spawn MAZ_AE_fnc_serverLoop;
+			waitUntil {!isNil "MAZ_EP_fnc_addFunctionToMainLoop"};
+			["MAZ_AE_fnc_serverLoop"] call MAZ_EP_fnc_addFunctionToMainLoop;
 		} else {
 			[] spawn MAZ_AE_fnc_resetGForceEffectLoop;
 			MAZ_Key_ToggleLaser = ["Toggle Laser","Toggle your aircraft's laser.",211,{call MAZ_AE_fnc_toggleAircraftLaser;}] call MAZ_fnc_newKeybind;
