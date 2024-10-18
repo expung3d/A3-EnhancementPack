@@ -40,16 +40,17 @@ private _myJIPCode = "MAZ_EPSystem_AN_JIP";
 
 private _value = (str {
 	MAZ_AN_fnc_ambientNoisesMainLoop = {
-		while {MAZ_EP_CoreEnabled} do {
-			if(!MAZ_ambientNoisesToggle) exitWith {sleep 0.1;};
-			[] spawn MAZ_AN_fnc_handleDogBarking;
-			[] spawn MAZ_AN_fnc_handleTreeCreaking;
-			[] spawn MAZ_AN_fnc_handleSwampFrogs;
-			[] spawn MAZ_AN_fnc_handleGasMaskSound;
-			[] spawn MAZ_AN_fnc_handleGasMaskOverlay;
-			[] spawn MAZ_AN_fnc_handleRoosterSound;
-			sleep 0.1;
-		};
+		if(!MAZ_ambientNoisesToggle) exitWith {};
+		[] spawn MAZ_AN_fnc_handleDogBarking;
+		[] spawn MAZ_AN_fnc_handleTreeCreaking;
+		[] spawn MAZ_AN_fnc_handleSwampFrogs;
+		[] spawn MAZ_AN_fnc_handleGasMaskSound;
+		[] spawn MAZ_AN_fnc_handleGasMaskOverlay;
+		[] spawn MAZ_AN_fnc_handleRoosterSound;
+	};
+	[] spawn {
+		waitUntil {!isNil "MAZ_EP_fnc_addFunctionToMainLoop"};
+		["MAZ_AN_fnc_ambientNoisesMainLoop"] call MAZ_EP_fnc_addFunctionToMainLoop;
 	};
 
 	MAZ_AN_fnc_handleDogBarking = {
@@ -151,17 +152,28 @@ private _value = (str {
 			MAZ_AN_gasMaskTime = time;
 		};
 		if(time < MAZ_AN_gasMaskTime) exitWith {};
-		if !(call MAZ_AN_fnc_checkForGasMask) exitWith {};
+		if !(call MAZ_AN_fnc_checkForGasMask || call MAZ_AN_fnc_checkForPilotHelmet) exitWith {};
 
 		private _randomType = selectRandom [1,2,3,4];
-		playSound3D [format ["A3\sounds_f\characters\human-sfx\diver-breath-%1.wss",_randomType],player,false,getPosASL player, 2, 1, 5];
-		playSound3D [format ["A3\sounds_f\characters\human-sfx\diver-breath-%1.wss",_randomType],player,false,getPosASL player, 2, 1, 5];
-		private _fatigue = 1 - (getFatigue player);
-		private _randomSleep = (selectRandom [2.5,2.75,3,3.25,3.5]) * _fatigue;
-		if(_randomSleep < 1.25) then {
-			_randomSleep = 1.25;
+		private _soundData = if(call MAZ_AN_fnc_checkForPilotHelmet) then {[5,175,true]} else {[2,5,false]};
+		playSound3D [format ["A3\sounds_f\characters\human-sfx\diver-breath-%1.wss",_randomType],player,false,getPosASL player, _soundData # 0, 1, _soundData # 1, 0, _soundData # 2];
+		playSound3D [format ["A3\sounds_f\characters\human-sfx\diver-breath-%1.wss",_randomType],player,false,getPosASL player, _soundData # 0, 1, _soundData # 1, 0, _soundData # 2];
+		if(call MAZ_AN_fnc_checkForPilotHelmet && !isNil "MAZ_AE_aircraftEnhancementEnable") then {
+			(call MAZ_AE_fnc_getGForces) params ["_current","_avgStr"];
+			private _fatigue = 1 - _avgStr;
+			private _randomSleep = (selectRandom [2.5,2.75,3,3.25,3.5]) * _fatigue;
+			if(_randomSleep < 1.25) then {
+				_randomSleep = 1.25;
+			};
+			MAZ_AN_gasMaskTime = time + _randomSleep;
+		} else {
+			private _fatigue = 1 - (getFatigue player);
+			private _randomSleep = (selectRandom [2.5,2.75,3,3.25,3.5]) * _fatigue;
+			if(_randomSleep < 1.25) then {
+				_randomSleep = 1.25;
+			};
+			MAZ_AN_gasMaskTime = time + _randomSleep;
 		};
-		MAZ_AN_gasMaskTime = time + _randomSleep;
 	};
 
 	MAZ_AN_fnc_handleGasMaskOverlay = {
@@ -210,6 +222,20 @@ private _value = (str {
 		];
 		private _return = false;
 		if(goggles player in _masks) then {
+			_return = true;
+		};
+		_return
+	};
+
+	MAZ_AN_fnc_checkForPilotHelmet = {
+		private _helmets = [
+			"H_PilotHelmetFighter_I",
+			"H_PilotHelmetFighter_O",
+			"H_PilotHelmetFighter_B",
+			"H_PilotHelmetFighter_I_E"
+		];
+		private _return = false;
+		if(headgear player in _helmets && (vehicle player) isKindOf "Plane") then {
 			_return = true;
 		};
 		_return
