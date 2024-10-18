@@ -68,13 +68,12 @@ private _value = (str {
 		};
 
 		MAZ_fnc_offroadVehiclesLoopForServer = {
-			while{MAZ_EP_CoreEnabled} do {
-				call MAZ_fnc_setupVehicles;
-				sleep 1;
-			};
+			if(time < (missionNamespace getVariable ["MAZ_EP_SOV_setupLoopTime",time])) exitWith {};
+			call MAZ_SOV_fnc_setupVehicles;
+			missionNamespace setVariable ["MAZ_EP_SOV_setupLoopTime",time + 0.1];
 		};
 
-		MAZ_fnc_setupVehicles = {
+		MAZ_SOV_fnc_setupVehicles = {
 			{
 				if(!((typeOf _x) isKindOf "LandVehicle")) then {continue};
 				if((typeOf _x) isKindOf "Tank") then {continue};
@@ -116,7 +115,8 @@ private _value = (str {
 		};
 
 		if(isServer) then {
-			[] spawn MAZ_fnc_offroadVehiclesLoopForServer;
+			waitUntil {!isNil "MAZ_EP_fnc_addFunctionToMainLoop"};
+			["MAZ_fnc_offroadVehiclesLoopForServer"] call MAZ_EP_fnc_addFunctionToMainLoop;
 		};
 	};
 	[] spawn {
