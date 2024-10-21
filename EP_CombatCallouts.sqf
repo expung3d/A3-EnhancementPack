@@ -1040,7 +1040,20 @@ private _value = (str {
 	};
 	[] spawn {
 		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_addDiaryRecord"};
-		["Combat Callouts", "Players will make callouts like 'Reloading!' and 'I need a medic' in appropriate contexts. This can help with noticing injured friendlies by audio ques rather than seeing them."] call MAZ_EP_fnc_addDiaryRecord;
+		[
+			"Combat Callouts", 
+			"Players will make callouts like 'Reloading!' and 'I need a medic' in appropriate contexts. This can help with noticing injured friendlies by audio ques rather than having to look for them. Forces those without microphones to communicate, at least, through their character.",
+			[
+				"Reload callouts",
+				"Kill confirmation callouts",
+				"Callout direction when pinging positions",
+				"Callout when taking fire",
+				"Callout dead friendly",
+				"Callout when throwing grenades",
+				"Call for a medic when incapacitated",
+				"Face and voices change to match your side dependent on the map"
+			]	
+		] call MAZ_EP_fnc_addDiaryRecord;
 	};
 	[] spawn {
 		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_createNotification"};

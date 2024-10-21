@@ -1316,9 +1316,18 @@ private _value = (str {
 		};
 
 		MAZ_EP_fnc_addDiaryRecord = {
-			params ["_displayName","_description"];
+			params ["_displayName","_description",["_featureList",[]]];
 			waitUntil {!isNil "MAZ_EP_DiarySubject"};
-			player createDiaryRecord ["MAZ_EP_DiarySubject",[format ["[EP] : %1",_displayName],format ["<font color='#db8727' size='18' face='PuristaSemibold'>%1</font><br/><font size='16' face='PuristaSemibold'>%2</font>",_displayName,_description]]];
+			if(count _featureList == 0) then {
+				player createDiaryRecord ["MAZ_EP_DiarySubject",[format ["[EP] : %1",_displayName],format ["<font color='#db8727' size='18' face='PuristaBold'>%1</font><br/><font size='14' face='PuristaMedium'>%2</font>",_displayName,_description]]];
+			} else {
+				private _textWithFeatures = format ["<font color='#db8727' size='18' face='PuristaBold'>%1</font><br/><font size='14' face='PuristaMedium'>%2</font><br/><br/><font size='16' face='PuristaSemibold'>Features:</font><br/><font size='14' face='PuristaMedium'>",_displayName,_description];
+				{
+					_textWithFeatures = _textWithFeatures + (format [" • %1<br/>",_x]);
+				}forEach _featureList;
+				_textWithFeatures = _textWithFeatures + "</font>";
+				player createDiaryRecord ["MAZ_EP_DiarySubject",[format ["[EP] : %1",_displayName],_textWithFeatures]];
+			};
 		};
 
 		MAZ_EP_fnc_systemMessage = {
@@ -2164,7 +2173,23 @@ private _value = (str {
 		call MAZ_EP_fnc_initSettings;
 		call MAZ_EP_fnc_createBaseDiary;
 		call MAZ_EP_fnc_addCamoFacesToArsenal;
-		["Core Pack","The Enhancement Pack Core adds the base functionality required for the rest of the EP. This adds the keybind framework and various other systems. To see all keybinds available, press CTRL + 0 (on your main keyboard)."] spawn MAZ_EP_fnc_addDiaryRecord;
+		[
+			"Core Pack",
+			"The Enhancement Pack Core adds the base functionality required for the rest of the EP, like keybinds and automated systems. It also implements a ton of small quality of life improvements. To see all keybinds available, press CTRL + 0.",
+			[
+				"Earplugs (Default END)",
+				"Automatic parachutes for HALO jumps",
+				"Throw smokes while injured",
+				"Sit down in chairs (Default DOWN ARROW KEY)",
+				"Unflip vehicles",
+				"Adjust view distance (Default 9 [NUM])",
+				"Holstering weapon (Default H)",
+				"Repack magazines",
+				"Improved vaulting",
+				"Adjustable keybinds (Default CTRL + 0)",
+				"Additional camo faces in the arsenal"
+			]
+		] spawn MAZ_EP_fnc_addDiaryRecord;
 		
 		[] spawn MAZ_EP_fnc_event_onNotificationCountChanged;
 		[

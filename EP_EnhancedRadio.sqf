@@ -200,7 +200,15 @@ private _value = (str {
 	};
 	[] spawn {
 		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_addDiaryRecord"};
-		["Enhanced Radio", "This makes radio noises happen when talking through global, side, command, and group channels. These sounds are audible to everyone around you, so when in PvP be aware of this."] call MAZ_EP_fnc_addDiaryRecord;
+		[
+			"Enhanced Radio", 
+			"This makes radio noises happen when talking through global, side, command, and group channels. These sounds are audible to everyone around you, so when in PvP be aware of this.",
+			[
+				"Radio communications make beeping noises, audible to everyone, even your enemies",
+				"Radio channels are global, side, command, and group",
+				"Optionally makes it so only Squad Leaders can speak on radio channels, the rest are stuck to direct and vehicle chat"
+			]	
+		] call MAZ_EP_fnc_addDiaryRecord;
 	};
 	[] spawn {
 		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_createNotification"};

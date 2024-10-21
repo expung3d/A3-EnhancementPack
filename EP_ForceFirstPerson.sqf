@@ -83,7 +83,7 @@ private _value = (str {
 	};
 	[] spawn {
 		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_addDiaryRecord"};
-		["Force First Person", "This is so self explanatory that if I need to explain it to you you shouldn't be here."] call MAZ_EP_fnc_addDiaryRecord;
+		["Force First Person", "This is so self explanatory that if I need to explain it to you then you probably shouldn't be here."] call MAZ_EP_fnc_addDiaryRecord;
 	};
 	[] spawn {
 		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_createNotification"};

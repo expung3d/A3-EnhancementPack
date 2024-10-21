@@ -342,7 +342,17 @@ private _value = (str {
 
 	[] spawn {
 		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_addDiaryRecord"};
-		["Ambient Noises", "Around the map you will be able to hear various ambient noises. Dogs barking in towns, trees creaking in the woods, gas mask sounds while wearing them, etc. Generally meant to add immersion."] call MAZ_EP_fnc_addDiaryRecord;
+		[
+			"Ambient Noises", 
+			"Around the map you will be able to hear various ambient noises. Generally meant to add immersion and make the world less empty.",
+			[
+				"Dogs bark in towns",
+				"Gas masks and pilot helmets make breathing noises",
+				"Birds get scared off when players shoot in forests unsuppressed",
+				"Froaks croak in swamps",
+				"Roosters crow in the mornings"
+			]
+		] call MAZ_EP_fnc_addDiaryRecord;
 	};
 	[] spawn {
 		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_createNotification"};

@@ -223,7 +223,14 @@ private _value = (str {
 	};
 	[] spawn {
 		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_addDiaryRecord"};
-		["Balanced Mortars", "Mortars don't have artillery computers and require usage of a range card which makes fire inaccurate. In addition, when firing or near fired mortars your ears will ring. Ringing is reduced when using earplugs."] call MAZ_EP_fnc_addDiaryRecord;
+		[
+			"Balanced Mortars", 
+			"Mortars don't have artillery computers and require usage of a range card which makes fire inaccurate. In addition, when firing or near fired mortars your ears will ring. Ringing is reduced when using earplugs.",
+			[
+				"Mortar range cards replace the artillery computer",
+				"Ears ring when earplugs aren't put in and mortars fire nearby"
+			]
+		] call MAZ_EP_fnc_addDiaryRecord;
 	};
 	[] spawn {
 		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_createNotification"};

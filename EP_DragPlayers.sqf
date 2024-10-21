@@ -348,7 +348,15 @@ private _value = (str {
 	};
 	[] spawn {
 		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_addDiaryRecord"};
-		["Player Dragging", "You can drag injured friendlies and load them into vehicles. Allowing you to move them to safety before reviving them."] call MAZ_EP_fnc_addDiaryRecord;
+		[
+			"Player Dragging", 
+			"You can drag injured friendlies and load them into vehicles. Allowing you to move them to safety before reviving them.",
+			[
+				"Dragging downed players",
+				"Take the backpack of a downed player",
+				"Load injured players into vehicles for transport"
+			]
+		] call MAZ_EP_fnc_addDiaryRecord;
 	};
 	[] spawn {
 		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_createNotification"};

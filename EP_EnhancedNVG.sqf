@@ -453,7 +453,20 @@ private _value = (str {
 	};
 	[] spawn {
 		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_addDiaryRecord"};
-		["Enhanced Nightvision", "This makes NVGs more realistic by adding extra film grain when using them and preventing the use of magnified optics. With NVGs you will still be able to use 1x optics, however, zoomed optics aren't available. In addition, you will be forced into first person when using NVGs. Also, ENVGs have white phosphor tubes... because its cool."] call MAZ_EP_fnc_addDiaryRecord;
+		[
+			"Enhanced Nightvision", 
+			"This makes NVGs more realistic and adds a ton of features for nighttime operations. Makes you feel super dooper tacticool and operator.",
+			[
+				"Dynamic grain and brightness for NVGs",
+				"Cannot use magnified optics with NVGs, only 1x sights",
+				"NVGs force you into first person, except for in vehicles",
+				"White phosphor tubes in ENVGs",
+				"Thermal night vision is disabled",
+				"IR Illuminators are built into the PEQ lasers (Default CTRL + L)",
+				"Adds holding breath for point shooting with lasers (Default hold Shift)",
+				"Evens the playing field at nighttime by making AI slightly dumber"
+			]
+		] call MAZ_EP_fnc_addDiaryRecord;
 	};
 	[] spawn {
 		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_createNotification"};
