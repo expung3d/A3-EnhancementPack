@@ -206,7 +206,8 @@ private _value = (str {
 			[
 				"Radio communications make beeping noises, audible to everyone, even your enemies",
 				"Radio channels are global, side, command, and group",
-				"Optionally makes it so only Squad Leaders can speak on radio channels, the rest are stuck to direct and vehicle chat"
+				"Optionally makes it so only Squad Leaders can speak on radio channels, the rest are stuck to direct and vehicle chat",
+				"When using radio channels you will hold the push to talk on your radio"
 			]	
 		] call MAZ_EP_fnc_addDiaryRecord;
 	};
