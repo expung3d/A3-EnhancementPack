@@ -2177,23 +2177,24 @@ private _value = (str {
 			"Core Pack",
 			"The Enhancement Pack Core adds the base functionality required for the rest of the EP, like keybinds and automated systems. It also implements a ton of small quality of life improvements. To see all keybinds available, press CTRL + 0.",
 			[
+				"Adjustable keybinds (Default CTRL + 0)",
 				"Earplugs (Default END)",
+				"Holstering weapon (Default H)",
+				"Adjust view distance (Default 9 [NUM])",
+				"Sit down in chairs (Default DOWN ARROW KEY)",
 				"Automatic parachutes for HALO jumps",
 				"Throw smokes while injured",
-				"Sit down in chairs (Default DOWN ARROW KEY)",
 				"Unflip vehicles",
-				"Adjust view distance (Default 9 [NUM])",
-				"Holstering weapon (Default H)",
 				"Repack magazines",
 				"Improved vaulting",
-				"Adjustable keybinds (Default CTRL + 0)",
-				"Additional camo faces in the arsenal"
+				"Additional camo faces in the arsenal",
+				"Anti-Troll measures"
 			]
 		] spawn MAZ_EP_fnc_addDiaryRecord;
 		
 		[] spawn MAZ_EP_fnc_event_onNotificationCountChanged;
 		[
-			"Enhancement Pack Core has been loaded! Press CTRL + 0 to view applicable keybinds.",
+			"Enhancement Pack Core has been loaded! Open your map and go to the Enhancement Pack section to learn more about the systems.",
 			"System Initialization Notification",
 			12
 		] spawn MAZ_EP_fnc_createNotification;
@@ -2240,4 +2241,11 @@ comment "Add faster swimming";
 
 comment "
 Reduce the number of while loops within Enhancement Pack. Make a general while loop for Enhancement Pack and have a system to add functions to it.
+";
+
+comment "
+Cool stuff:
+Group direction indicator: 'a3\ui_f\data\igui\rscingameui\rscunitinfo\groupdir_ca.paa'
+Altimeter Watch Background: 'a3\ui_f\data\igui\rscingameui\rscunitinfoairrtdfulldigital\digital_background_altitude_imp_ca.paa'
+Watch Hand: 'a3\ui_f\data\igui\rscingameui\rscunitinfoairrtdfulldigital\digital_arrow_vsi_ca.paa'
 ";
