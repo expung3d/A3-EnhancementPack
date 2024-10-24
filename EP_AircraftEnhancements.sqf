@@ -1915,13 +1915,24 @@ private _value = (str {
 			["MAZ_AE_fnc_serverLoop"] call MAZ_EP_fnc_addFunctionToMainLoop;
 		} else {
 			[] spawn MAZ_AE_fnc_resetGForceEffectLoop;
-			MAZ_Key_ToggleLaser = ["Toggle Laser","Toggle your aircraft's laser.",211,{call MAZ_AE_fnc_toggleAircraftLaser;}] call MAZ_fnc_newKeybind;
+			'MAZ_Key_ToggleLaser = ["Toggle Laser","Toggle your aircraft laser.",211,{call MAZ_AE_fnc_toggleAircraftLaser;}] call MAZ_fnc_newKeybind';
 		};
 	};
 
 	[] spawn {
 		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_addDiaryRecord"};
-		["Aircraft Enhancements", "Aircraft have brighter collision lights, camera shake when firing and taxiing. There is turbulence when flying low or near other aircraft, dust is kicked up when flying low, and G Forces effect pilots. Helicopters have had an overhaul to crash landings, now they no longer instantly explode when shot down, giving pilots a chance to auto-rotate."] call MAZ_EP_fnc_addDiaryRecord;
+		[
+			"Aircraft Enhancements", 
+			"Various enhancements to aircraft. Thanks to [TW] Aaren for his Advance Aero Effects mod.",
+			[
+				"Brighter collision lights",
+				"Camera shake when firing and taxiing",
+				"Turbulence when flying low or nearby other aircraft",
+				"Dust kick up when flying low over dirt and water",
+				"G forces effect pilots, possibly causing GLOC",
+				"Helicopter crash landing overhaul"
+			]
+		] call MAZ_EP_fnc_addDiaryRecord;
 	};
 	[] spawn {
 		waitUntil {uiSleep 0.1; !isNil "MAZ_EP_fnc_createNotification"};
