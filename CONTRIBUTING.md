@@ -54,11 +54,16 @@ if(_deleted) then {
 ## MAZ_EP_fnc_addDiaryRecord
 Creates a new diary record in the Enhancement Pack section in the map screen. This is primarily used to supply players with information about the systems currently active. 
 ```sqf
-//This if statement should exist so as to ensure the function isn't called if its undefined.
-if(!isNil "MAZ_EP_fnc_addDiaryRecord") then {
+//This should be done in a scheduled environment so you can waitUntil the variable is available.
+[] spawn {
+	waitUntil {!isNil "MAZ_EP_fnc_addDiaryRecord"};
 	[
 		"System Display Name", 
-		"System Description"
+		"System Description",
+		[
+			"Feature list items",
+			"Feature #2"
+		]
 	] call MAZ_EP_fnc_addDiaryRecord;
 };
 ```
@@ -71,7 +76,7 @@ Creates a new setting in the Enhancement Pack Settings system that can be modifi
 	"Setting Description\nShown as a tooltip in the settings menu.",
 	"VariableNameThatIsChanged", //This variable will be changed when the setting is changed
 	true, //Default value. Boolean or number
-	"TYPE", //Toggle or Slider
+	"TYPE", //TOGGLE or SLIDER
 	[params] //Only used for Slider: [minValue, maxValue]
 ] call MAZ_EP_fnc_createNewSetting;
 ```
@@ -80,4 +85,28 @@ Creates a new setting in the Enhancement Pack Settings system that can be modifi
 Opens the Enhancement Pack Settings system's editing menu. You can change the settings in this menu.
 ```sqf
 call MAZ_EP_fnc_editSettings;
+```
+
+## MAZ_EP_fnc_addFunctionToMainLoop
+Adds the specified function to the Core main loop that executes every hundredth of a second.
+```sqf
+["MAZ_fnc_myFunctionVariableNameAsAString"] call MAZ_EP_fnc_addFunctionToMainLoop;
+```
+
+## MAZ_EP_fnc_removeFunctionToMainLoop
+Removes the specified function to the Core main loop that executes every hundredth of a second.
+```sqf
+["MAZ_fnc_myFunctionVariableNameAsAString"] call MAZ_EP_fnc_removeFunctionToMainLoop;
+```
+
+## MAZ_EP_fnc_addToExecQueue
+Adds a function to the function queue. Functions added to the queue will run in the order which they were added. Functions begin only after the function prior finishes.
+*Note: In future this function will be updated to use a hashMapObject so that queues can be made individually.*
+```sqf
+[
+	[Parameters],
+	{
+		//Function to be executed
+	}
+] call MAZ_EP_fnc_addToExecQueue;
 ```
