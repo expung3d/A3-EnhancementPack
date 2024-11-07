@@ -29,8 +29,10 @@ private _myJIPCode = "MAZ_EPSystem_IFU_JIP";
 [] spawn {
 	waitUntil {!isNil "MAZ_EP_fnc_addNewSetting"};
 	["Increased Fuel Burn","Whether to enable the Increased Fuel Burn system.","MAZ_EP_increaseFuelUse",true,"TOGGLE",[],"MAZ_IFB"] call MAZ_EP_fnc_addNewSetting;
-	["Fuel Consumption Rate (Ground)","The rate at which ground vehicles burn fuel.\nMultiply the normal burn rate by this value.","MAZ_fuelConsumptionRateGround",2,"SLIDER",[1,4],"MAZ_IFB"] call MAZ_EP_fnc_addNewSetting;
-	["Fuel Consumption Rate (Air)","The rate at which air vehicles burn fuel.\nMultiply the normal burn rate by this value.","MAZ_fuelConsumptionRateAir",6,"SLIDER",[1,10],"MAZ_IFB"] call MAZ_EP_fnc_addNewSetting;
+	["Wheeled Fuel Consumption Rate","The rate at which wheeled vehicles burn fuel.\nMultiply the normal burn rate by this value.","MAZ_fuelConsumptionRateWheeled",2,"SLIDER",[1,10],"MAZ_IFB"] call MAZ_EP_fnc_addNewSetting;
+	["Tracked Fuel Consumption Rate","The rate at which tracked vehicles burn fuel.\nMultiply the normal burn rate by this value.","MAZ_fuelConsumptionRateTracked",4,"SLIDER",[1,10],"MAZ_IFB"] call MAZ_EP_fnc_addNewSetting;
+	["Plane Fuel Consumption Rate","The rate at which planes burn fuel.\nMultiply the normal burn rate by this value.","MAZ_fuelConsumptionRatePlane",8,"SLIDER",[1,15],"MAZ_IFB"] call MAZ_EP_fnc_addNewSetting;
+	["Heli Fuel Consumption Rate","The rate at which helicopters burn fuel.\nMultiply the normal burn rate by this value.","MAZ_fuelConsumptionRateHeli",6,"SLIDER",[1,15],"MAZ_IFB"] call MAZ_EP_fnc_addNewSetting;
 };
 
 private _value = (str {
@@ -42,20 +44,28 @@ private _value = (str {
 			if(!MAZ_EP_increaseFuelUse) exitWith {};
 			private _veh = vehicle player;
 			if(_veh != player && isEngineOn _veh && driver _veh == player) then {
-				private _fuelCapacityMax = getNumber (configfile >> "CfgVehicles" >> typeOf _veh >> "fuelCapacity");
-				private _fuelConsumptionRate = getNumber (configfile >> "CfgVehicles" >> typeOf _veh >> "fuelConsumptionRate");
-				if(typeOf _veh isKindOf "Land") then {
-					_veh setFuel ((fuel _veh) - (_fuelConsumptionRate/_fuelCapacityMax * MAZ_fuelConsumptionRateGround));
+				private _type = typeOf _veh;
+				private _fuelCapacityMax = getNumber (configfile >> "CfgVehicles" >> _type >> "fuelCapacity");
+				private _fuelConsumptionRate = getNumber (configfile >> "CfgVehicles" >> _type >> "fuelConsumptionRate");
+				if(_type isKindOf "Car") then {
+					if(_type isKindOf "Tank") then {
+						_veh setFuel ((fuel _veh) - (_fuelConsumptionRate/_fuelCapacityMax * MAZ_fuelConsumptionRateTracked));
+					} else {
+						_veh setFuel ((fuel _veh) - (_fuelConsumptionRate/_fuelCapacityMax * MAZ_fuelConsumptionRateWheeled));
+					};
 				};
-				if(typeOf _veh isKindOf "Air") then {
-					_veh setFuel ((fuel _veh) - (_fuelConsumptionRate/_fuelCapacityMax * MAZ_fuelConsumptionRateAir));
+				if(_type isKindOf "Plane") then {
+					_veh setFuel ((fuel _veh) - (_fuelConsumptionRate/_fuelCapacityMax * MAZ_fuelConsumptionRatePlane));
+				};
+				if(_type isKindOf "Helicopter") then {
+					_veh setFuel ((fuel _veh) - (_fuelConsumptionRate/_fuelCapacityMax * MAZ_fuelConsumptionRateHeli));
 				};
 			};
 		};
 
 		while {MAZ_EP_CoreEnabled} do {
 			[] spawn MAZ_increaseFuelConsumptionLoop;
-			sleep 1;
+			sleep 0.1;
 		};
 	};
 	[] spawn {
