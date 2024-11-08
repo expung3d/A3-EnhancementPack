@@ -545,7 +545,7 @@ private _value = (str {
 				player setVelocity [0,0,0];
 				player setPos _pos;
 				player allowDamage false;
-				player setDir _dir;
+				player setDir (getDir _chair + _dir);
 				_sat = true;
 			};
 			_index = _benchTypes findIf {_type in _x};
@@ -575,7 +575,7 @@ private _value = (str {
 					player setPos _pos;
 				};
 				player allowDamage false;
-				player setDir 180;
+				player setDir (getDir _chair + 180);
 				_sat = true;
 				
 			};
@@ -1171,7 +1171,7 @@ private _value = (str {
 				call MAZ_fnc_enableMovement;
 				player setPosASL _climbPos;
 				if(primaryWeapon player != "") then {
-					player action ["SwitchWeapon", player, player, 3];
+					player action ["SwitchWeapon", player, player, 1];
 				};
 				player setFatigue (getFatigue player + 0.30);
 				MAZ_EP_isClimbing = false;
