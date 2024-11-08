@@ -408,20 +408,17 @@ private _value = (str {
 			private _isEarplugsIn = player getVariable ['isEarplugsIn',false];
 			if(_isEarplugsIn) then {
 				1 fadeSound 1;
-				player setVariable ['isEarplugsIn',false];
-				[] call MAZ_fnc_deleteEarplugIcon;
+				call MAZ_fnc_deleteEarplugIcon;
 			} else {
 				1 fadeSound 0.1;
-				player setVariable ['isEarplugsIn',true];
-				[] call MAZ_fnc_createEarplugIcon;
+				call MAZ_fnc_createEarplugIcon;
 			};
+			player setVariable ["isEarplugsIn",!_isEarplugsIn];
 		};
 
 		MAZ_fnc_createEarplugIcon = {
 			with uiNamespace do {
-				_display = findDisplay 46;
-
-				earplugsIcon = _display ctrlCreate ["RscPicture",-1];
+				earplugsIcon = (findDisplay 46) ctrlCreate ["RscPicture",-1];
 				earplugsIcon ctrlSetText "a3\ui_f\data\igui\rscingameui\rscunitinfoairrtdfull\ico_cpt_sound_off_ca.paa";
 				earplugsIcon ctrlSetTextColor [1,1,1,0.7];
 				earplugsIcon ctrlSetPosition [0.00499997 * safezoneW + safezoneX,0.137 * safezoneH + safezoneY,0.0257812 * safezoneW,0.044 * safezoneH];
@@ -435,88 +432,202 @@ private _value = (str {
 			};
 		};
 
-		MAZ_fnc_sitDown = {
-			private _chair = cursorObject;
-
-			private _chairType = [
-				"Land_CampingChair_V2_F",
-				"Land_CampingChair_V2_white_F",
-				"Land_CampingChair_V1_F", 
-				"Land_Chair_EP1", 
-				"Land_RattanChair_01_F", 
-				"Land_Bench_F", 
-				"Land_ChairWood_F", 
-				"Land_OfficeChair_01_F",
-				"Land_WoodenLog_F",
-				"Land_ChairPlastic_F",
-				"Land_ArmChair_01_F",
-				"Land_ChairWood_F"
-			];
-			
-			private _type_id = [
-				"Land_CampingChair_V2_F",
-				"Land_CampingChair_V2_white_F",
-				"Land_CampingChair_V1_F", 
-				"Land_Chair_EP1", 
-				"Land_RattanChair_01_F", 
-				"Land_Bench_F", 
-				"Land_ChairWood_F", 
-				"Land_OfficeChair_01_F",
-				"Land_WoodenLog_F",
-				"Land_ChairPlastic_F",
-				"Land_ArmChair_01_F",
-				"Land_ChairWood_F"
-			] find (typeOf _chair);
-			
-			
-			player setVariable ["chair",_chair];
-			if ((player distance _chair) < 4) then {
-				if((typeOf _chair) in _chairType) then {
-					private _unit = player;
-					if (isNil "_unit") exitWith {};
-					_ehAnimDone = _unit addEventHandler ["AnimDone", {
-						private["_unit","_animset","_anim"];
-						_unit = player;
-						_animset = ["HubSittingChairA_idle1","HubSittingChairA_idle2","HubSittingChairA_idle3","HubSittingChairA_move1"];
-
-						if (alive _unit) then {
-							_anim = _animset select (round (random (count _animset - 1)));
-							[_unit,_anim] remoteExec ["switchMove", 0];
+		MAZ_fnc_disableMovement = {
+			params [["_disableRotate",true]];
+			call MAZ_fnc_enableMovement;
+			MAZ_DEH_KeyDown_OverrideMovement = (findDisplay 46) displayAddEventHandler ["KeyDown", {
+				params ["_displayOrControl", "_key", "_shift", "_ctrl", "_alt"];
+				private _actions = ["MoveForward","MoveBack","TurnLeft","TurnRight","MoveFastForward","MoveSlowFoward","MoveLeft","MoveRight"];
+				private _keys = [];
+				{
+					_keys = _keys + (actionKeys _x);
+				}forEach _actions;
+				(_key in _keys)
+			}];
+			if(_disableRotate) then {
+				[
+					"MAZ_OverrideTurning",
+					"onEachFrame",
+					{
+						params ["_direction"];
+						if(abs (getDir player - _direction) > 0.1) then {
+							player setDir _direction;
 						};
-					}];
-					private _playerDir = direction player;
-					_unit setVariable ["MAZ_animEH",_ehAnimDone];
-					[_unit,"HubSittingChairA_idle1"] remoteExec ["switchMove",0];
-					private _offset = [[0,-0.1,-0.5],[0,-0.1,-0.5], [0,-0.1,-0.5], [0,0,-0.5], [0,0,-0.5], [0,0,-0.2], [0,0,0], [0,0,-0.6],[0,0,-0.2],[0,0,-0.5],[0,0,-0.6],[0,0,-0.5]] select _type_id;
-					private _dir = [180, 180, 180, 90, 180, 90, 180, 180,_playerDir, 90,360,90] select _type_id;
-					_unit attachTo [_chair, _offset];
-					_unit allowDamage false;
-					_unit setDir _dir;
-					comment "[_unit, _dir] remoteExec ['setDir',0,true]";
-					_unit setVariable ["sitting", true];
-					if(isNull (player getVariable "chair")) then {
-						[_unit,""] remoteExec ["switchMove",0];
-						detach _unit;
-						_unit removeEventHandler ["AnimDone",_unit getVariable ["MAZ_animEH",0]];
-						_unit setVariable ["sitting", false];
-					};
+					},
+					[getDir player]
+				] call BIS_fnc_addStackedEventHandler;
+			};
+		};
+
+		MAZ_fnc_enableMovement = {
+			if(!isNil "MAZ_DEH_KeyDown_OverrideMovement") then {
+				(findDisplay 46) displayRemoveEventHandler ["KeyDown",MAZ_DEH_KeyDown_OverrideMovement];
+			};
+			["MAZ_OverrideTurning", "onEachFrame"] call BIS_fnc_removeStackedEventHandler;
+		};
+
+		MAZ_fnc_removeSitAnimation = {
+			if(!isNil "MAZ_EH_AnimDone_SitAnimation") then {
+				player removeEventHandler ["AnimDone",MAZ_EH_AnimDone_SitAnimation];
+			};
+			if(!isNil "MAZ_EP_Sitting_BackpackHolder") then {
+				deleteVehicle MAZ_EP_Sitting_BackpackHolder;
+				MAZ_EP_Sitting_BackpackHolder = nil;
+				[backpackContainer player,[0,(MAZ_EP_Sitting_BackpackTexture # 0)]] remoteExec ["setObjectTexture"];
+				MAZ_EP_Sitting_BackpackTexture = nil;
+			};
+		};
+
+		MAZ_fnc_doSitAnimation = {
+			params [["_hideBag",true]];
+			call MAZ_fnc_removeSitAnimation;
+			MAZ_EP_Sitting_AnimSet = selectRandom [
+				["HubSittingChairA_idle1","HubSittingChairA_idle2","HubSittingChairA_idle3","HubSittingChairA_move1"],
+				["HubSittingChairB_idle1","HubSittingChairB_idle2","HubSittingChairB_idle3","HubSittingChairB_move1"],
+				["HubSittingChairC_idle1","HubSittingChairC_idle2","HubSittingChairC_idle3","HubSittingChairC_move1"],
+				["HubSittingChairUA_idle1","HubSittingChairUA_idle2","HubSittingChairUA_idle3"],
+				["HubSittingChairUB_idle1","HubSittingChairUB_idle2","HubSittingChairUB_idle3"],
+				["HubSittingChairUC_idle1","HubSittingChairUC_idle2","HubSittingChairUC_idle3"]
+			];
+			MAZ_EH_AnimDone_SitAnimation = player addEventHandler ["AnimDone", {
+				if (alive player) then {
+					private _anim = selectRandom MAZ_EP_Sitting_AnimSet;
+					[player,_anim] remoteExec ["switchMove"];
+				};
+			}];
+			[player,selectRandom MAZ_EP_Sitting_AnimSet] remoteExec ["switchMove"];
+			if(_hideBag) then {
+				if(backpack player != "") then {
+					MAZ_EP_Sitting_BackpackHolder = "groundweaponholder" createVehicle (getpos player);  
+					MAZ_EP_Sitting_BackpackHolder addBackpackCargoGlobal [backpack player,1];  
+					MAZ_EP_Sitting_BackpackHolder attachTo [player,[-0.1,0.9,0.65]];
+					MAZ_EP_Sitting_BackpackHolder setVectorDirAndUp [[0,1,0],[0,0,1]];
+					MAZ_EP_Sitting_BackpackTexture = getObjectTextures (backpackContainer player);
+					[backpackContainer player,[0,""]] remoteExec ["setObjectTexture"];
 				};
 			};
 		};
 
-		MAZ_fnc_standUp = {
-			private _unit = player;
-			
-			private _chair = player getVariable "chair";
-			private _positionPlayer = getPosATL player;
-			if ((_unit getVariable ["sitting", false])) then {
-				_unit removeEventHandler ["AnimDone",_unit getVariable ["MAZ_animEH",0]];
-				[_unit, ""] remoteExec ["switchMove", 0];
-				detach _unit;
-				player allowDamage true;
-				_unit setPos [(_positionPlayer select 0), (_positionPlayer select 1) + 0.8,(_positionPlayer select 2) -0.5];
-				_unit setVariable ["sitting", false];
+		MAZ_fnc_sitDown = {
+			if(player getVariable ["MAZ_EP_Sitting",false]) exitWith {call MAZ_fnc_standUp};
+			private _chair = cursorObject;
+			if(isNull _chair) exitWith {};
+			if(player distance _chair > 4) exitWith {};
+
+			private _chairTypes = [
+				["Land_CampingChair_V2_F",180,[0,-0.1,-0.5]],
+				["Land_CampingChair_V2_white_F",180,[0,-0.1,-0.5]],
+				["Land_CampingChair_V1_F",180,[0,-0.1,-0.5]],
+				["Land_ChairPlastic_F",90,[0.05,0,-0.5]],
+				["Land_RattanChair_01_F",180,[0,-0.1,-1]],
+				["Land_ArmChair_01_F",0,[0,0,-1.5]],
+				["Land_ChairWood_F",180,[0,0,-0.5]],
+				["Land_OfficeChair_01_F",180,[0,-0.05,-0.4]]
+			];
+			private _benchTypes = [
+				["Land_Bench_01_F",[[-0.65,-0.1,-1],[0,-0.1,-1],[0.65,-0.1,-1]]],
+				["Land_Bench_02_F",[[-0.65,-0.1,-1],[0,-0.1,-1],[0.65,-0.1,-1]]],
+				["Land_Bench_03_F",[[-0.65,-0.1,-1],[0,-0.1,-1],[0.65,-0.1,-1]]],
+				["Land_Bench_04_F",[[-0.65,0.1,-0.35],[0,0.1,-0.35],[0.65,0.1,-0.35]],true],
+				["Land_Bench_05_F",[[-0.65,-0.1,-1],[0,-0.1,-1],[0.65,-0.1,-1]]]
+			];
+			private _logs = [
+				["Land_WoodenLog_F"],
+				["Land_WoodenLog_02_F"]
+			];
+
+			private _sat = false;
+			private _type = typeOf _chair;
+			private _index = _chairTypes findIf {_type in _x};
+			if(_index != -1) then {
+				(_chairTypes select _index) params ["_type","_dir","_offset"];
+				private _pos = _chair modelToWorld _offset;
+				player setVelocity [0,0,0];
+				player setPos _pos;
+				player allowDamage false;
+				player setDir _dir;
+				_sat = true;
 			};
+			_index = _benchTypes findIf {_type in _x};
+			if(_index != -1) then {
+				(_benchTypes select _index) params ["_type","_offsets",["_attach",false]];
+				private _spots = _chair getVariable ["MAZ_EP_BenchSpots",[]];
+				if(_spots isEqualTo []) then {
+					_spots resize [(count _offsets),objNull];
+				};
+				private _indexes = [];
+				{
+					if(isNull _x) then {
+						_indexes pushBack _forEachIndex;
+					};
+				}forEach _spots;
+
+				private _index = selectRandom _indexes;
+				private _offset = _offsets select _index;
+				_spots set [_index,player];
+				_chair setVariable ["MAZ_EP_BenchSpots",_spots,true];
+				
+				private _pos = _chair modelToWorld _offset;
+				player setVelocity [0,0,0];
+				if(_attach) then {
+					player attachTo [_chair,_offset];
+				} else {
+					player setPos _pos;
+				};
+				player allowDamage false;
+				player setDir 180;
+				_sat = true;
+				
+			};
+			_index = _logs findIf {_type in _x};
+			if(_index != -1) then {
+				player disableCollisionWith _chair;
+				_chair disableCollisionWith player;
+				private _pos = _chair modelToWorld [0,0,-0.5];
+				player setVelocity [0,0,0];
+				player setPos _pos;
+				player allowDamage false;
+				if(_type == "Land_WoodenLog_F") then {
+					private _dir = getDir player;
+					player attachTo [_chair,[0,0,-0.2]];
+					player setDir _dir;
+				};
+
+				player setVariable ["MAZ_EP_Chair",_chair];
+				player setVariable ["MAZ_EP_Sitting",true];
+				[false] call MAZ_fnc_doSitAnimation;
+				sleep 0.1;
+				[false] call MAZ_fnc_disableMovement;
+			};
+			if(_sat) then {
+				player setVariable ["MAZ_EP_Chair",_chair];
+				player setVariable ["MAZ_EP_Sitting",true];
+				[] call MAZ_fnc_doSitAnimation;
+				sleep 0.1;
+				[] call MAZ_fnc_disableMovement;
+			};
+		};
+
+		MAZ_fnc_standUp = {
+			private _chair = player getVariable "MAZ_EP_Chair";
+			private _playerPos = getPosATL player;
+			[player,""] remoteExec ["switchMove"];
+			detach player;
+			player allowDamage true;
+			player setPos (player getPos [0.75,getDir player]);
+			player enableCollisionWith _chair;
+			player setVariable ["MAZ_EP_Chair",objNull];
+			player setVariable ["MAZ_EP_Sitting",false];
+
+			private _spots = _chair getVariable "MAZ_EP_BenchSpots";
+			if(!isNil "_spots") then {
+				private _index = _spots find player;
+				_spots set [_index,objNull];
+				_chair setVariable ["MAZ_EP_BenchSpots",_spots,true];
+			};
+			
+			call MAZ_fnc_removeSitAnimation;
+			call MAZ_fnc_enableMovement;
 		};
 
 		MAZ_liteUnflip = {
@@ -734,7 +845,9 @@ private _value = (str {
 		};
 
 		MAZ_fnc_holsterWeapon = {
+			if(currentWeapon player == "") exitWith {};
 			player action ['SWITCHWEAPON',player,player,-1];
+			playSound3D ["a3\sounds_f\characters\stances\rifle_to_handgun.wss", player];
 			waitUntil {currentWeapon player == '' or {primaryWeapon player == '' && handgunWeapon player == ''}};
 		};
 
@@ -898,6 +1011,172 @@ private _value = (str {
 				player playMoveNow "AinvPknlMstpSnonWnonDnon_medic_1";
 				sleep 5;
 			};
+		};
+
+		MAZ_fnc_climbDebugView = {
+			if(isMultiplayer) exitWith {};
+			MAZ_ClimbDebug = true;
+			onEachFrame {
+				if(!isNil "MAZ_Climb_aboveBottom" && !isNil "MAZ_Climb_aboveTop") then {
+					drawLine3D [ASLtoAGL MAZ_Climb_aboveBottom,ASLtoAGL MAZ_Climb_aboveTop,[1,0,0,1]];
+				};
+
+				if(!isNil "MAZ_Climb_frontNear" && !isNil "MAZ_Climb_frontFar") then {
+					drawLine3D [ASLtoAGL MAZ_Climb_frontNear,ASLtoAGL MAZ_Climb_frontFar,[0,1,0,1]];
+				};
+
+				if(!isNil "MAZ_Climb_topBottom" && !isNil "MAZ_Climb_topTop") then {
+					drawLine3D [ASLtoAGL MAZ_Climb_topTop,ASLtoAGL MAZ_Climb_topBottom,[0,0,1,1]];
+				};
+			};
+		};
+
+		MAZ_fnc_climbOnObject = {
+			"GetInHelicopterCargoRf1 Step Up Anim";
+			"Check conditions";
+			if !(
+				(player == vehicle player) &&
+				(isTouchingGround player) &&
+				((stance player == "STAND") || (stance player == "CROUCH")) &&
+				(getFatigue player + 0.20) < 1 &&
+				!(missionNamespace getVariable ["MAZ_EP_isClimbing",false])
+			) exitWith {false};
+
+			"Debug object";
+			if(isNil "MAZ_testObjectPosition" && !isMultiplayer) then {
+				MAZ_testObjectPosition = "Sign_Arrow_Blue_F" createVehicle [0,0,0];
+			};
+
+			"Check for bushes and trees";
+			private _object = cursorObject;
+			private _strAr = (str _object) splitString " ";
+			if(isNull _object || {(count _strAr > 1) && {((_strAr # 1) select [0,2]) in ["b_","t_"]}}) exitWith {
+				if(!isMultiplayer) then {MAZ_testObjectPosition setPos [0,0,0];};
+				false;
+			};
+
+			"Check if blocked above";
+			private _posASL = getPosASL player;
+			private _aboveIntersect = lineIntersectsSurfaces [(_posASL vectorAdd [0,0,0.5]), (_posASL vectorAdd [0,0,3.55]),player,objNull,true,1,"GEOM"];
+			if(missionNamespace getVariable ["MAZ_ClimbDebug",false]) then {
+				MAZ_Climb_aboveBottom = (_posASL vectorAdd [0,0,0.5]);
+				MAZ_Climb_aboveTop = (_posASL vectorAdd [0,0,3.55]);
+			};
+			if(count _aboveIntersect != 0) exitWith {
+				if(!isMultiplayer) then {
+					systemChat "Object above player, can't climb";
+				};
+			};
+
+			"Check object intersect in front of player";
+			private _frontPos = if(currentWeapon player == "" || weaponLowered player) then {
+				eyePos player vectorAdd (eyeDirection player vectorMultiply 5);
+			} else {
+				eyePos player vectorAdd ((player weaponDirection (currentWeapon player)) vectorMultiply 5);
+			};
+			private _intersects = lineIntersectsSurfaces [eyePos player, _frontPos, player,objNull,true,1,"GEOM"];
+			if(missionNamespace getVariable ["MAZ_ClimbDebug",false]) then {
+				MAZ_Climb_frontNear = eyePos player;
+				MAZ_Climb_frontFar = _frontPos;
+			};
+			if(count _intersects == 0) exitWith {
+				if(!isMultiplayer) then {systemChat "No intersect";};
+				false;
+			};
+			private _intersect = _intersects # 0;
+			_intersect params ["_interPosASL","_surfaceNormal","_interObj","_parentObj"];
+			if(_object != _interObj) exitWith {
+				if(!isMultiplayer) then {systemChat "Intersect wrong object"; systemChat format ["Object: %1. InterObj: %2",_object, _interObj]};
+				false;
+			};
+			
+			"Get position further into object than intersect position";
+			private _dirToPlayer = _interPosASL getDir _posASL;
+			private _climbPos = _interPosASL getPos [0.3,_dirToPlayer + 180];
+			_climbPos set [2, ((_interPosASL # 2) + 1.5)];
+			private _ground = +_interPosASL;
+			_ground set [2,0];
+
+			"Check top intersect for object for height";
+			private _intersectTop = lineIntersectsSurfaces [_climbPos, _ground, player,objNull, true, 1, "GEOM"];
+			if(missionNamespace getVariable ["MAZ_ClimbDebug",false]) then {
+				MAZ_Climb_topBottom = _ground;
+				MAZ_Climb_topTop = _climbPos;
+			};
+			if(count _intersectTop == 0) exitWith {
+				if(!isMultiplayer) then {systemChat "Intersect top fail";};
+				false;
+			};
+			private _topIntersect = _intersectTop # 0;
+			_topIntersect params ["_topInterPosASL","_surfaceNormal","_topInterObj"];
+			if(_topInterObj != _interObj) exitWith {
+				if(!isMultiplayer) then {systemChat "Top intersect wrong object"; systemChat format ["Object: %1. Top: %2",_interObj,_topInterObj]};
+				false;
+			};
+			if((_topInterPosASL distance _climbPos) < 0.02) exitWith {
+				if(!isMultiplayer) then {
+					systemChat "Top inside object";
+					systemChat str (_topInterPosASL distance _climbPos);
+				};
+				false;
+			};
+
+			"Check distance to the intersect";
+			private _dist2D = _posASL distance2D _topInterPosASL;
+			if(_dist2D > 3) exitWith {
+				if(!isMultiplayer) then {systemChat "Wanted position too far";};
+				false;
+			};
+
+			"Check height limits";
+			private _heightDiff = (_topInterPosASL # 2) - (_posASL # 2);
+			if(!isMultiplayer) then {systemChat format ["HeightDiff: %1",_heightDiff];};
+			if(_heightDiff < 0) exitWith {
+				if(!isMultiplayer) then {systemChat "Wanted position is below player";};
+				false;
+			};
+			if(_heightDiff < 1.5) exitWith {
+				if(!isMultiplayer) then {systemChat "Object is too short";};
+				false;
+			};
+			if(_heightDiff > 2.55) exitWith {
+				if(!isMultiplayer) then {systemChat "Object too high";};
+				false;
+			};
+
+			"Do climb";
+			if(!isMultiplayer) then {MAZ_testObjectPosition setPosASL _topInterPosASL;};
+			[_topInterPosASL,_object] spawn {
+				params ["_climbPos","_climbObject"];
+				[] call MAZ_fnc_disableMovement;
+				MAZ_EP_isClimbing = true;
+				if(currentWeapon player != "") then {
+					player action ['SWITCHWEAPON',player,player,-1];
+					sleep 2.4;
+				} else {
+					sleep 0.1;
+				};
+				[player,"GetInHemttBack"] remoteExec ["switchMove"];
+				[] spawn {
+					private _timeToStop = time + 3.6;
+					while {time < _timeToStop} do {
+						private _index = selectRandom [1,2,3,4,5];
+						private _terrain = selectRandom ["dirt","gravel","sand"];
+						private _sound = playSound3D [format ["a3\sounds_f\characters\crawl\%1_crawl_%2.wss",_terrain,_index],player];
+						waitUntil { (soundParams _sound) isEqualTo [] };
+						sleep (0.1 + random 0.2);
+					};
+				};
+				sleep 3.6;
+				call MAZ_fnc_enableMovement;
+				player setPosASL _climbPos;
+				if(primaryWeapon player != "") then {
+					player action ["SwitchWeapon", player, player, 3];
+				};
+				player setFatigue (getFatigue player + 0.30);
+				MAZ_EP_isClimbing = false;
+			};
+			true;
 		};
 
 		MAZ_fnc_doJump = {
@@ -1140,14 +1419,14 @@ private _value = (str {
 			MAZ_Key_Holster = ["Holster Weapon","Holster your weapon.",35,{[] spawn MAZ_fnc_holsterWeapon;},false,false,false,false,false,"MAZ_Holster"] call MAZ_fnc_newKeybind;
 			MAZ_Key_ViewDist = ["Edit View Distance","Edit your view distance (Local).",73,{[] spawn MAZ_fnc_newViewDistanceMenu;},false,false,false,true,false,"MAZ_ViewDistance"] call MAZ_fnc_newKeybind;
 			MAZ_Key_Unflip = ["Unflip Vehicle","Unflip the vehicle you look at.",12,{[] spawn MAZ_liteUnflip;},false,true,false,false,false,"MAZ_Unflip"] call MAZ_fnc_newKeybind;
-			MAZ_Key_SitDown = ["Sit Down","Sit down in the chair.",208,{[] spawn MAZ_fnc_sitDown;},false,false,false,true,false,"MAZ_SitDown"] call MAZ_fnc_newKeybind;
-			MAZ_Key_StandUp = ["Stand Up","Stand up from the chair.",200,{[] spawn MAZ_fnc_standUp;},false,false,false,true,false,"MAZ_SitDown"] call MAZ_fnc_newKeybind;
+			MAZ_Key_SitDown = ["Sit Down","Sit down in the chair.",57,{[] spawn MAZ_fnc_sitDown;},false,false,false,true,false,"MAZ_Sit"] call MAZ_fnc_newKeybind;
 			MAZ_Key_DeploySmoke = ["Deploy Smokes","Use smoke while injured.",57,{[] spawn MAZ_fnc_openSmokeGrenadeMenu;},false,false,false,false,false,"MAZ_UseSmoke"] call MAZ_fnc_newKeybind;
 
 			if(!isNil "MAZ_DEH_KeyDown_Jump") then {
 				(findDisplay 46) displayRemoveEventHandler ["KeyDown",MAZ_DEH_KeyDown_Jump];
 			};
 			MAZ_jumpKeyBind = (findDisplay 46) displayAddEventHandler ["KeyDown", "_this call MAZ_fnc_doJump;"];
+			MAZ_Key_Climb = ["Climb Object","Climb onto objects.",57,{call MAZ_fnc_climbOnObject;},true,false,false,true,false,"MAZ_Climb"] call MAZ_fnc_newKeybind;
 
 			if(!isNil "MAZ_EH_InventoryOpened_LockBackpacks") then {
 				player removeEventHandler ["InventoryOpened",MAZ_EH_InventoryOpened_LockBackpacks];
@@ -1257,6 +1536,16 @@ private _value = (str {
 					}forEach (crew _staticWeapon);
 				};
 			}];
+
+			if(!isNil "MAZ_EH_WeaponChanged_WeaponSounds") then {
+				player removeEventHandler ["WeaponChanged",MAZ_EH_WeaponChanged_WeaponSounds];
+			};
+			MAZ_EH_WeaponChanged_WeaponSounds = player addEventHandler ["WeaponChanged", {
+				params ["_object", "_oldWeapon", "_newWeapon", "_oldMode", "_newMode", "_oldMuzzle", "_newMuzzle", "_turretIndex"];
+				if(_oldWeapon == "") then {
+					playSound3D ["a3\sounds_f\characters\stances\rifle_to_handgun.wss", player];
+				};
+			}];
 		};
 
 		MAZ_fnc_initDefaultAddonServer = {
@@ -1289,14 +1578,30 @@ private _value = (str {
 			};
 		};
 
+		MAZ_fnc_hasWetsuit = {
+			(uniform player) in ["U_B_Wetsuit","U_O_Wetsuit","U_I_Wetsuit","U_B_survival_uniform"];
+		};
+
 		MAZ_fnc_removeTrollBackpacks = {
 			if(time < (missionNamespace getVariable ["MAZ_EP_trollBagsLoopTime",time])) exitWith {};
 			comment "Prevent pistol whippers";
 			if(!(missionNamespace getVariable ["MAZ_BetterSprint",false])) then {
-				if(currentWeapon player == handgunWeapon player && weaponLowered player && stance player == "CROUCH") then {
+				private _animSpeed = getAnimSpeedCoef player;
+				if(currentWeapon player == handgunWeapon player && weaponLowered player && stance player == "CROUCH" && _animSpeed > 0.8) then {
 					player setAnimSpeedCoef 0.8;
 				} else {
-					player setAnimSpeedCoef 1;
+					if(_animSpeed < 1) then {
+						player setAnimSpeedCoef 1;
+					};
+				};
+				if(((getPosASL player) # 2) < -1.9 && !(call MAZ_fnc_hasWetsuit)) then {
+					if(_animSpeed < 1.75) then {
+						player setAnimSpeedCoef 1.75;
+					};
+				} else {
+					if(_animSpeed > 1) then {
+						player setAnimSpeedCoef 1;
+					};
 				};
 			};
 
@@ -1321,9 +1626,9 @@ private _value = (str {
 			if(count _featureList == 0) then {
 				player createDiaryRecord ["MAZ_EP_DiarySubject",[format ["[EP] : %1",_displayName],format ["<font color='#db8727' size='18' face='PuristaBold'>%1</font><br/><font size='14' face='PuristaMedium'>%2</font>",_displayName,_description]]];
 			} else {
-				private _textWithFeatures = format ["<font color='#db8727' size='18' face='PuristaBold'>%1</font><br/><font size='14' face='PuristaMedium'>%2</font><br/><br/><font size='16' face='PuristaSemibold'>Features:</font><br/><font size='14' face='PuristaMedium'>",_displayName,_description];
+				private _textWithFeatures = format ["<font color='#db8727' size='18' face='PuristaBold'>%1</font><br/><font size='14' face='PuristaMedium'>%2</font><br/><br/><font size='16' face='PuristaSemibold'>Features:</font><font size='14' face='PuristaMedium'>",_displayName,_description];
 				{
-					_textWithFeatures = _textWithFeatures + (format [" • %1<br/>",_x]);
+					_textWithFeatures = _textWithFeatures + (format ["<br/> • %1",_x]);
 				}forEach _featureList;
 				_textWithFeatures = _textWithFeatures + "</font>";
 				player createDiaryRecord ["MAZ_EP_DiarySubject",[format ["[EP] : %1",_displayName],_textWithFeatures]];
@@ -1337,6 +1642,28 @@ private _value = (str {
 				playSound _sound;
 			};
 		};
+
+		MAZ_EP_QueueObject = [
+			["#flags", ["sealed"]],
+			["#create", {
+				[_self] spawn {
+					params ["_self"];
+					while(!isNull _self) do {
+						if(count (_self get "queue") > 0) then {
+							private _queue = _self get "queue";
+							(_queue # 0) params ["_parameters", "_function"];
+
+							
+						};
+					};
+				};
+			}],
+			["#delete", {}],
+			["#str",{"A queue object"}],
+			["queue",[]],
+			["addToQueue",{}],
+			["startQueue",{}]
+		];
 
 		MAZ_EP_fnc_addToExecQueue = {
 			params ["_parameters","_function"];
@@ -2188,7 +2515,8 @@ private _value = (str {
 				"Repack magazines",
 				"Improved vaulting",
 				"Additional camo faces in the arsenal",
-				"Anti-Troll measures"
+				"Anti-Troll measures",
+				"Fixed GL smoke grenades from going to the stratosphere"
 			]
 		] spawn MAZ_EP_fnc_addDiaryRecord;
 		
@@ -2240,12 +2568,22 @@ missionNamespace setVariable [_varName,_value,true];
 comment "Add faster swimming";
 
 comment "
-Reduce the number of while loops within Enhancement Pack. Make a general while loop for Enhancement Pack and have a system to add functions to it.
-";
-
-comment "
 Cool stuff:
 Group direction indicator: 'a3\ui_f\data\igui\rscingameui\rscunitinfo\groupdir_ca.paa'
 Altimeter Watch Background: 'a3\ui_f\data\igui\rscingameui\rscunitinfoairrtdfulldigital\digital_background_altitude_imp_ca.paa'
 Watch Hand: 'a3\ui_f\data\igui\rscingameui\rscunitinfoairrtdfulldigital\digital_arrow_vsi_ca.paa'
+
+Cease Fire: Acts_PercMstpSlowWrflDnon_handup2
+Stop: Acts_PercMstpSlowWrflDnon_handup2b
+Wave: Acts_PercMstpSlowWrflDnon_handup1b
+
+Laying Wounded: Acts_SittingWounded_in/loop/wave/out/breath
+
+Open Terminal: Acts_TerminalOpen
+
+Waking Up Lean: Acts_Waking_Up_Player | Acts_Getting_Up_Player
+
+Injured Leaning Tell to Go: Acts_Injured_Driver_go/Loop
+
+
 ";
