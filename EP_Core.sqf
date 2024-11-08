@@ -847,7 +847,7 @@ private _value = (str {
 		MAZ_fnc_holsterWeapon = {
 			if(currentWeapon player == "") exitWith {};
 			player action ['SWITCHWEAPON',player,player,-1];
-			playSound3D ["a3\sounds_f\characters\stances\rifle_to_handgun.wss", player];
+			playSound3D ["a3\sounds_f\characters\stances\rifle_to_handgun.wss", player, false, getPosASL player, 5, 1, 7.5];
 			waitUntil {currentWeapon player == '' or {primaryWeapon player == '' && handgunWeapon player == ''}};
 		};
 
@@ -1162,7 +1162,7 @@ private _value = (str {
 					while {time < _timeToStop} do {
 						private _index = selectRandom [1,2,3,4,5];
 						private _terrain = selectRandom ["dirt","gravel","sand"];
-						private _sound = playSound3D [format ["a3\sounds_f\characters\crawl\%1_crawl_%2.wss",_terrain,_index],player];
+						private _sound = playSound3D [format ["a3\sounds_f\characters\crawl\%1_crawl_%2.wss",_terrain,_index],player,false, getPosASL player, 1,1,15];
 						waitUntil { (soundParams _sound) isEqualTo [] };
 						sleep (0.1 + random 0.2);
 					};
@@ -1419,7 +1419,7 @@ private _value = (str {
 			MAZ_Key_Holster = ["Holster Weapon","Holster your weapon.",35,{[] spawn MAZ_fnc_holsterWeapon;},false,false,false,false,false,"MAZ_Holster"] call MAZ_fnc_newKeybind;
 			MAZ_Key_ViewDist = ["Edit View Distance","Edit your view distance (Local).",73,{[] spawn MAZ_fnc_newViewDistanceMenu;},false,false,false,true,false,"MAZ_ViewDistance"] call MAZ_fnc_newKeybind;
 			MAZ_Key_Unflip = ["Unflip Vehicle","Unflip the vehicle you look at.",12,{[] spawn MAZ_liteUnflip;},false,true,false,false,false,"MAZ_Unflip"] call MAZ_fnc_newKeybind;
-			MAZ_Key_SitDown = ["Sit Down","Sit down in the chair.",57,{[] spawn MAZ_fnc_sitDown;},false,false,false,true,false,"MAZ_Sit"] call MAZ_fnc_newKeybind;
+			MAZ_Key_SitDown = ["Sit Down","Sit down in the chair.",57,{[] spawn MAZ_fnc_sitDown;},false,false,false,false,false,"MAZ_Sit"] call MAZ_fnc_newKeybind;
 			MAZ_Key_DeploySmoke = ["Deploy Smokes","Use smoke while injured.",57,{[] spawn MAZ_fnc_openSmokeGrenadeMenu;},false,false,false,false,false,"MAZ_UseSmoke"] call MAZ_fnc_newKeybind;
 
 			if(!isNil "MAZ_DEH_KeyDown_Jump") then {
@@ -1543,7 +1543,7 @@ private _value = (str {
 			MAZ_EH_WeaponChanged_WeaponSounds = player addEventHandler ["WeaponChanged", {
 				params ["_object", "_oldWeapon", "_newWeapon", "_oldMode", "_newMode", "_oldMuzzle", "_newMuzzle", "_turretIndex"];
 				if(_oldWeapon == "") then {
-					playSound3D ["a3\sounds_f\characters\stances\rifle_to_handgun.wss", player];
+					playSound3D ["a3\sounds_f\characters\stances\rifle_to_handgun.wss", player, false, getPosASL player, 5, 1, 7.5];
 				};
 			}];
 		};
