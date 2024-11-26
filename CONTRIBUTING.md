@@ -99,9 +99,9 @@ Removes the specified function to the Core main loop that executes every hundred
 ["MAZ_fnc_myFunctionVariableNameAsAString"] call MAZ_EP_fnc_removeFunctionToMainLoop;
 ```
 
-## MAZ_EP_fnc_addToExecQueue
+## MAZ_EP_fnc_addToExecQueue (Legacy)
 Adds a function to the function queue. Functions added to the queue will run in the order which they were added. Functions begin only after the function prior finishes.
-*Note: In future this function will be updated to use a hashMapObject so that queues can be made individually.*
+*Note: This function has been replaced by MAZ_EP_QueueObject. It is only still supported for backwards compatibilty.*
 ```sqf
 [
 	[Parameters],
@@ -109,4 +109,18 @@ Adds a function to the function queue. Functions added to the queue will run in 
 		//Function to be executed
 	}
 ] call MAZ_EP_fnc_addToExecQueue;
+```
+
+## MAZ_EP_QueueObject
+A HashMapObject class definition that acts as a Queue data structure. Functions added to the queue will be ran in the order they are added. Functions begin only after the function prior finishes. Creating a `MAZ_EP_QueueObject` creates a Queue only until the queue is empty, once it is empty the Queue will delete itself. To override this function, pass `true` as a parameter to `MAZ_EP_QueueObject`'s constructor.
+```sqf
+//Create a temporary Queue. Once the functions are finished it will delete itself.
+MAZ_EP_tempQueue = createHashMapObject [ MAZ_EP_QueueObject ];
+MAZ_EP_tempQueue call [ "addToQueue", [ [ "FUNCTION PARAMS" ], { systemChat _this; } ] ];
+
+//Create a permanent Queue. You can add functions to this queue at any point after its creation.
+MAZ_EP_permQueue = createHashMapObject [ MAZ_EP_QueueObject, [ true ] ];
+MAZ_EP_permQueue call [ "addToQueue", [ [ "FUNCTION PARAMS" ], { systemChat _this; } ] ]; //This runs
+//Some time later...
+MAZ_EP_permQueue call [ "addToQueue", [ [ "FUNCTION PARAMS 2" ], { systemChat _this; } ] ]; //This runs
 ```

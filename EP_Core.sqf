@@ -470,6 +470,10 @@ private _value = (str {
 			if(!isNil "MAZ_EH_AnimDone_SitAnimation") then {
 				player removeEventHandler ["AnimDone",MAZ_EH_AnimDone_SitAnimation];
 			};
+			if(!isNil "MAZ_EP_Sitting_BackpackType") then {
+				player addBackpackGlobal MAZ_EP_Sitting_BackpackType;
+				MAZ_EP_Sitting_BackpackType = nil;
+			};
 			if(!isNil "MAZ_EP_Sitting_BackpackHolder") then {
 				deleteVehicle MAZ_EP_Sitting_BackpackHolder;
 				MAZ_EP_Sitting_BackpackHolder = nil;
@@ -503,7 +507,12 @@ private _value = (str {
 					MAZ_EP_Sitting_BackpackHolder attachTo [player,[-0.1,0.9,0.65]];
 					MAZ_EP_Sitting_BackpackHolder setVectorDirAndUp [[0,1,0],[0,0,1]];
 					MAZ_EP_Sitting_BackpackTexture = getObjectTextures (backpackContainer player);
-					[backpackContainer player,[0,""]] remoteExec ["setObjectTexture"];
+					if((backpack player) isKindOf "Weapon_Bag_Base") then {
+						MAZ_EP_Sitting_BackpackType = backpack player;
+						removeBackpack player;
+					} else {
+						[backpackContainer player,[0,""]] remoteExec ["setObjectTexture"];
+					};
 				};
 			};
 		};
@@ -515,30 +524,39 @@ private _value = (str {
 			if(player distance _chair > 4) exitWith {};
 
 			private _chairTypes = [
-				["Land_CampingChair_V2_F",180,[0,-0.1,-0.5]],
-				["Land_CampingChair_V2_white_F",180,[0,-0.1,-0.5]],
-				["Land_CampingChair_V1_F",180,[0,-0.1,-0.5]],
-				["Land_ChairPlastic_F",90,[0.05,0,-0.5]],
-				["Land_RattanChair_01_F",180,[0,-0.1,-1]],
-				["Land_ArmChair_01_F",0,[0,0,-1.5]],
-				["Land_ChairWood_F",180,[0,0,-0.5]],
-				["Land_OfficeChair_01_F",180,[0,-0.05,-0.4]]
+				["land_campingchair_v2_f",180,[0,-0.1,-0.5]],
+				["land_campingchair_v2_white_f",180,[0,-0.1,-0.5]],
+				["land_campingchair_v1_f",180,[0,-0.1,-0.5]],
+				["land_chairplastic_f",90,[0.05,0,-0.5]],
+				["land_rattanchair_01_f",180,[0,-0.1,-1]],
+				["land_armchair_01_f",0,[0,0,-1.5]],
+				["land_chairwood_f",180,[0,0,-0.5]],
+				["land_officechair_01_f",180,[0,-0.05,-0.4]]
 			];
 			private _benchTypes = [
-				["Land_Bench_01_F",[[-0.65,-0.1,-1],[0,-0.1,-1],[0.65,-0.1,-1]]],
-				["Land_Bench_02_F",[[-0.65,-0.1,-1],[0,-0.1,-1],[0.65,-0.1,-1]]],
-				["Land_Bench_03_F",[[-0.65,-0.1,-1],[0,-0.1,-1],[0.65,-0.1,-1]]],
-				["Land_Bench_04_F",[[-0.65,0.1,-0.35],[0,0.1,-0.35],[0.65,0.1,-0.35]],true],
-				["Land_Bench_05_F",[[-0.65,-0.1,-1],[0,-0.1,-1],[0.65,-0.1,-1]]]
+				["land_bench_01_f",[[-0.65,-0.1,-1],[0,-0.1,-1],[0.65,-0.1,-1]]],
+				["land_bench_02_f",[[-0.65,-0.1,-1],[0,-0.1,-1],[0.65,-0.1,-1]]],
+				["land_bench_03_f",[[-0.65,-0.1,-1],[0,-0.1,-1],[0.65,-0.1,-1]]],
+				["land_bench_04_f",[[-0.65,0.1,-0.35],[0,0.1,-0.35],[0.65,0.1,-0.35]],true],
+				["land_bench_05_f",[[-0.65,-0.1,-1],[0,-0.1,-1],[0.65,-0.1,-1]]],
+				["land_sofa_01_f",[[-0.6,0.1,-0.45],[0,0.1,-0.45],[0.6,0.1,-0.45]],true]
 			];
 			private _logs = [
-				["Land_WoodenLog_F"],
-				["Land_WoodenLog_02_F"]
+				["land_woodenlog_f"],
+				["land_woodenlog_02_f"]
 			];
 
 			private _sat = false;
 			private _type = typeOf _chair;
-			private _index = _chairTypes findIf {_type in _x};
+			if(_type == "") then {
+				private _split = (str _chair) splitString " ";
+				if(count _split == 2) then {
+					private _model = _split # 1;
+					_model = _model select [0,count _model - 4];
+					_type = "land_" + _model;
+				};
+			};
+			private _index = _chairTypes findIf {toLower _type in _x};
 			if(_index != -1) then {
 				(_chairTypes select _index) params ["_type","_dir","_offset"];
 				private _pos = _chair modelToWorld _offset;
@@ -548,7 +566,7 @@ private _value = (str {
 				player setDir (getDir _chair + _dir);
 				_sat = true;
 			};
-			_index = _benchTypes findIf {_type in _x};
+			_index = _benchTypes findIf {toLower _type in _x};
 			if(_index != -1) then {
 				(_benchTypes select _index) params ["_type","_offsets",["_attach",false]];
 				private _spots = _chair getVariable ["MAZ_EP_BenchSpots",[]];
@@ -575,11 +593,18 @@ private _value = (str {
 					player setPos _pos;
 				};
 				player allowDamage false;
-				player setDir (getDir _chair + 180);
+				
+				if(!_attach) then {
+					player setDir (getDir _chair + 180);
+				} else {
+					if(toLower _type == "land_bench_04_f") then {
+						player setDir 180;
+					};
+				};
 				_sat = true;
 				
 			};
-			_index = _logs findIf {_type in _x};
+			_index = _logs findIf {toLower _type in _x};
 			if(_index != -1) then {
 				player disableCollisionWith _chair;
 				_chair disableCollisionWith player;
@@ -1646,24 +1671,45 @@ private _value = (str {
 		MAZ_EP_QueueObject = [
 			["#flags", ["sealed"]],
 			["#create", {
-				[_self] spawn {
-					params ["_self"];
-					while(!isNull _self) do {
+				_this params [["_forever",false]];
+				[_self,_forever] spawn {
+					params ["_self","_forever"];
+					private _queueStarted = false;
+					private _stopQueue = false;
+					while{(_self get "active") && (!_stopQueue || _forever)} do {
+						if(count (_self get "queue") == 0 && _stopQueue) then {
+							sleep 0.1;
+							continue;
+						};
 						if(count (_self get "queue") > 0) then {
+							_queueStarted = true;
+							_stopQueue = false;
 							private _queue = _self get "queue";
 							(_queue # 0) params ["_parameters", "_function"];
-
-							
+							_parameters call _function;
+							_queue deleteAt 0;
+							_self set ["queue",_queue];
+						} else {
+							if(_queueStarted && !_stopQueue) then {
+								_stopQueue = true;
+								systemChat "End of queue";
+							};
 						};
 					};
 				};
 			}],
 			["#delete", {}],
 			["#str",{"A queue object"}],
+			["active",true],
 			["queue",[]],
-			["addToQueue",{}],
-			["startQueue",{}]
+			["addToQueue",{
+				private _queue = _self get "queue";
+				_queue pushBack _this;
+				_self set ["queue",_queue];
+			}]
 		];
+
+		MAZ_EP_NotificationQueue = createHashMapObject [MAZ_EP_QueueObject,[true]];
 
 		MAZ_EP_fnc_addToExecQueue = {
 			params ["_parameters","_function"];
@@ -1696,10 +1742,10 @@ private _value = (str {
 			private _activeNotifications = missionNamespace getVariable ["MAZ_EP_notifications",[]];
 
 			if(count _activeNotifications > 3) exitWith {
-				[[_text,_title,_duration,_sound,_image],{
+				MAZ_EP_NotificationQueue call ["addToQueue",[_text,_title,_duration,_sound,_image],{
 					sleep 0.1;
 					_this spawn MAZ_EP_fnc_createNotification;
-				}] call MAZ_EP_fnc_addToExecQueue;
+				}];
 			};
 			getResolution params ["","","","","","_uiScale"];
 			private _scaleUI = switch (_uiScale) do {
@@ -1864,243 +1910,244 @@ private _value = (str {
 		};
 
 		comment "User Actions System";
-
-			MAZ_EP_fnc_addUserAction = {
-				params [
-					["_actionText","User Action",[""]],
-					["_actionCondition",{true},[{}]],
-					["_actionCode",{},[{}]],
-					["_icon","a3\ui_f\data\map\markers\military\dot_ca.paa",[""]],
-					["_childrenActions",[],[[]]],
-					["_position","",[""]]
-				];
-
-				if(isNil "MAZ_EP_userActions") then {
-					MAZ_EP_userActions = [];
-				};
-				MAZ_EP_userActions pushBack [_actionText,_actionCondition,_actionCode,_icon,_childrenActions,_position];
-			};
-
-			MAZ_EP_fnc_addUserActionChild = {
-				params [
-					["_userActionId",-1,[1,[]]],
-					["_actionText","User Action",[""]],
-					["_actionCondition",{true},[{}]],
-					["_actionCode",{},[{}]],
-					["_icon","a3\ui_f\data\map\markers\military\dot_ca.paa",[""]],
-					["_childrenActions",[],[[]]],
-					["_position","",[""]]
-				];
-				if(isNil "MAZ_EP_userActions") exitWith {};
-				if(_userAction isEqualType -1 && {_userActionId == -1}) exitWith {};
-
-				private _parentAction = [];
-				if(_userActionId isEqualType []) then {
-					_parentAction = +MAZ_EP_userActions;
-					{
-						if(_forEachIndex == 0) then {
-							_parentAction = _parentAction select _x;
-							continue;
-						};
-
-						_parentAction = _parentAction select 4 select _x;
-					}forEach _userActionId;
-
-				} else {
-					_parentAction = MAZ_EP_userActions select _userActionId;
-				};
-
-				_parentAction params ["_pActionText","_pActionCondition","_pActionCode","_pIcon","_pChildrenActions","_pPosition"];
-
-				private _newChildren = _pChildrenActions + [[_actionText,_actionCondition,_actionCode,_icon,_childrenActions,_position]];
-				_parentAction set [4, _newChildren];
-
-				if(_userActionId isEqualType []) then {
-					private _tempParent = +MAZ_EP_userActions;
-					private _tempOld = [];
-					
-					{
-						if(_forEachIndex == 0) then {
-							_tempOld pushBack (_tempParent select _x);
-							continue;
-						};
-						private _temp = (_tempOld select (_forEachIndex - 1)) select 4 select _x;
-						
-						_tempOld pushBack _temp;
-					}forEach _userActionId;
-
-					_tempOld pushBack [_actionText,_actionCondition,_actionCode,_icon,_childrenActions,_position];
-
-					{
-						if (_forEachIndex == (count _tempOld - 1)) then {continue};
-						private _action = _x;
-						private _actions = _action select 4;
-
-						_actions set [(_userActionId select _forEachIndex), (_tempOld select (_forEachIndex + 1))];
-						_action set [4, _actions];
-						_tempOld set [_forEachIndex, _action];
-					}forEachReversed _tempOld; 
-
-					MAZ_EP_userActions set [(_userActionId select 0), _tempOld select 0];
-				} else {
-					MAZ_EP_userActions set [_userActionId,_parentAction];
-				};
-			};
-
-			MAZ_EP_fnc_createUserActions = {
-				MAZ_EP_userActionsShown = true;
-				MAZ_EP_userActionPlayerPos = getPos player;
-				if(isNil "MAZ_EP_userActionsDrawn") then {
-					MAZ_EP_userActionsDrawn = [];
-				};
-
-				private _actionsToDraw = [];
-				{
-					_x params ["_text","_condition","_actionCode","_icon","_childrenActions","_position"];
-					if !(call _condition) then {continue};
-
-					_actionsToDraw pushBack _forEachIndex;
-				}forEach MAZ_EP_userActions;
-
-				private _actionCount = count _actionsToDraw;
-
-				if(_actionCount == 0) exitWith {
-					MAZ_EP_userActionsDrawn pushBack [-1,positionCameraToWorld [0, 0, 2]];
-				};
-
-				private _radius = 0.15;
-				private _intervals = 360 / _actionCount;
-				private _origin = positionCameraToWorld [0, 0, 2];
-				{
-					private _action = MAZ_EP_userActions select _x;
-
-					private _circumferencePos = _forEachIndex * _intervals;
-			
-					private _xPos2D = 0.5 + _radius * cos(_circumferencePos);
-					private _yPos2D = 0.5 + _radius * sin(_circumferencePos);
-					private _pos = screenToWorld [_xPos2D, _yPos2D];
-
-					private _alignRight = true;
-					if(false) then {
-						_alignRight = false;
-					};
-
-					MAZ_EP_userActionsDrawn pushBack [_x,_pos,_alignRight];
-				}forEach _actionsToDraw;
-			};
-
-			MAZ_EP_fnc_destroyUserActions = {
-				MAZ_EP_userActionsDrawn = [];
-				if(!isNil "MAZ_EP_selectedUserAction") then {
-					private _action = MAZ_EP_userActions select MAZ_EP_selectedUserAction;
-					_action params ["_text","_condition","_actionCode","_icon","_childrenActions","_position"];
-					call _actionCode;
-					MAZ_EP_selectedUserAction = nil;
-				};
-			};
-
-			MAZ_EP_fnc_showUserActions = {
-				params [["_mode","self",[""]]];
-
-				if((getPos player distance MAZ_EP_userActionPlayerPos) > 0.3) exitWith {};
-
-				switch (_mode) do {
-					case "self": {
-
-					};
-					case "external": {
-
-					};
-				};
-				comment "private _cursorPos = positionCameraToWorld [0, 0, 2]";
-				private _cursorPos = screenToWorld [0.5,0.5];
-
-				private _centerDot = drawIcon3D ["a3\ui_f\data\igui\cfg\cursors\selectover_ca.paa",[0.8,0,0,1], _cursorPos, 1,1, 0];
-				if(isNil "MAZ_EP_userActionsDrawn") then {
-					MAZ_EP_userActionsDrawn = [];
-				};
-
-				if(count MAZ_EP_userActionsDrawn == 1 && {(MAZ_EP_userActionsDrawn select 0 select 0) == -1}) exitWith {
-					private _pos = MAZ_EP_userActionsDrawn select 0 select 1;
-					private _noActions = drawIcon3D [
-						"a3\ui_f\data\map\markers\military\dot_ca.paa",
-						[1,1,1,1], 
-						_pos, 
-						1, 
-						1, 
-						0, 
-						"No Actions", 
-						2, 
-						0.035, 
-						"PuristaMedium", 
-						"right", 
-						false, 
-						0, 
-						-0.025
+			if(false) then {
+				MAZ_EP_fnc_addUserAction = {
+					params [
+						["_actionText","User Action",[""]],
+						["_actionCondition",{true},[{}]],
+						["_actionCode",{},[{}]],
+						["_icon","a3\ui_f\data\map\markers\military\dot_ca.paa",[""]],
+						["_childrenActions",[],[[]]],
+						["_position","",[""]]
 					];
+
+					if(isNil "MAZ_EP_userActions") then {
+						MAZ_EP_userActions = [];
+					};
+					MAZ_EP_userActions pushBack [_actionText,_actionCondition,_actionCode,_icon,_childrenActions,_position];
 				};
 
-				private _closestAction = -1;
-				private _closestDrawPos = [];
-				private _closestValue = -1;
-				{
-					_x params ["_actionIndex","_drawPos","_alignRight"];
+				MAZ_EP_fnc_addUserActionChild = {
+					params [
+						["_userActionId",-1,[1,[]]],
+						["_actionText","User Action",[""]],
+						["_actionCondition",{true},[{}]],
+						["_actionCode",{},[{}]],
+						["_icon","a3\ui_f\data\map\markers\military\dot_ca.paa",[""]],
+						["_childrenActions",[],[[]]],
+						["_position","",[""]]
+					];
+					if(isNil "MAZ_EP_userActions") exitWith {};
+					if(_userAction isEqualType -1 && {_userActionId == -1}) exitWith {};
 
-					systemChat (str _x);
-					private _action = MAZ_EP_userActions select _actionIndex;
-					_action params ["_text","_condition","_actionCode","_icon","_childrenActions","_position"];
+					private _parentAction = [];
+					if(_userActionId isEqualType []) then {
+						_parentAction = +MAZ_EP_userActions;
+						{
+							if(_forEachIndex == 0) then {
+								_parentAction = _parentAction select _x;
+								continue;
+							};
 
-					if(_alignRight) then {
-						private _icon = drawIcon3D [_icon,[1,1,1,1], _drawPos, 1, 1, 0, _text, 2, 0.035, "PuristaMedium", "right", false, 0, -0.025];
+							_parentAction = _parentAction select 4 select _x;
+						}forEach _userActionId;
+
 					} else {
-						private _icon = drawIcon3D [_icon,[1,1,1,1], _drawPos, 1, 1, 0, _text, 2, 0.035, "PuristaMedium", "left", false, 0, -0.025];
+						_parentAction = MAZ_EP_userActions select _userActionId;
 					};
 
-					private _distanceToCursor = [0.5,0.5] distance2D (worldToScreen _drawPos);
-					if(_distanceToCursor < 0.1 && (_distanceToCursor < _closestValue || _closestValue == -1)) then {
-						systemChat "Closest";
-						_closestAction = _actionIndex;
-						_closestDrawPos = _drawPos;
-						_closestValue = _distanceToCursor;
+					_parentAction params ["_pActionText","_pActionCondition","_pActionCode","_pIcon","_pChildrenActions","_pPosition"];
+
+					private _newChildren = _pChildrenActions + [[_actionText,_actionCondition,_actionCode,_icon,_childrenActions,_position]];
+					_parentAction set [4, _newChildren];
+
+					if(_userActionId isEqualType []) then {
+						private _tempParent = +MAZ_EP_userActions;
+						private _tempOld = [];
+						
+						{
+							if(_forEachIndex == 0) then {
+								_tempOld pushBack (_tempParent select _x);
+								continue;
+							};
+							private _temp = (_tempOld select (_forEachIndex - 1)) select 4 select _x;
+							
+							_tempOld pushBack _temp;
+						}forEach _userActionId;
+
+						_tempOld pushBack [_actionText,_actionCondition,_actionCode,_icon,_childrenActions,_position];
+
+						{
+							if (_forEachIndex == (count _tempOld - 1)) then {continue};
+							private _action = _x;
+							private _actions = _action select 4;
+
+							_actions set [(_userActionId select _forEachIndex), (_tempOld select (_forEachIndex + 1))];
+							_action set [4, _actions];
+							_tempOld set [_forEachIndex, _action];
+						}forEachReversed _tempOld; 
+
+						MAZ_EP_userActions set [(_userActionId select 0), _tempOld select 0];
+					} else {
+						MAZ_EP_userActions set [_userActionId,_parentAction];
 					};
-				}forEach MAZ_EP_userActionsDrawn;
-
-				if(_closestAction != -1) then {
-					private _selectedIcon = drawIcon3D ["a3\ui_f\data\map\groupicons\selector_selected_ca.paa",[0.8,0,0,0.8], _closestDrawPos, 1, 1, 0];
-					MAZ_EP_selectedUserAction = _closestAction;
-				} else {
-					MAZ_EP_selectedUserAction = nil;
 				};
-			};
-			if(!isNil "MAZ_EP_MEH_Draw3D_UserAction") then {
-				removeMissionEventHandler ["Draw3D", MAZ_EP_MEH_Draw3D_UserAction];
-			};
-			MAZ_EP_MEH_Draw3D_UserAction = addMissionEventHandler ["Draw3D", {
-				if(missionNamespace getVariable ["MAZ_EP_userActionsShown",false]) then {
-					["self"] call MAZ_EP_fnc_showUserActions;
-				};
-			}];
 
-			if(!isNil "MAZ_EP_DEH_KeyDown_UserAction") then {
-				(findDisplay 46) displayRemoveEventHandler ["KeyDown",MAZ_EP_DEH_KeyDown_UserAction];
-			};
-			MAZ_EP_DEH_KeyDown_UserAction = (findDisplay 46) displayAddEventHandler ["KeyDown",{
-				params ["_displayOrControl", "_key", "_shift", "_ctrl", "_alt"];
-				if(_key != 	219 || MAZ_EP_userActionsShown) exitWith {};
-				if(!MAZ_EP_userActionsShown) then {
-					call MAZ_EP_fnc_createUserActions;
-				};
-			}];
+				MAZ_EP_fnc_createUserActions = {
+					MAZ_EP_userActionsShown = true;
+					MAZ_EP_userActionPlayerPos = getPos player;
+					if(isNil "MAZ_EP_userActionsDrawn") then {
+						MAZ_EP_userActionsDrawn = [];
+					};
 
-			if(!isNil "MAZ_EP_DEH_KeyUp_UserAction") then {
-				(findDisplay 46) displayRemoveEventHandler ["KeyUp",MAZ_EP_DEH_KeyUp_UserAction];
+					private _actionsToDraw = [];
+					{
+						_x params ["_text","_condition","_actionCode","_icon","_childrenActions","_position"];
+						if !(call _condition) then {continue};
+
+						_actionsToDraw pushBack _forEachIndex;
+					}forEach MAZ_EP_userActions;
+
+					private _actionCount = count _actionsToDraw;
+
+					if(_actionCount == 0) exitWith {
+						MAZ_EP_userActionsDrawn pushBack [-1,positionCameraToWorld [0, 0, 2]];
+					};
+
+					private _radius = 0.15;
+					private _intervals = 360 / _actionCount;
+					private _origin = positionCameraToWorld [0, 0, 2];
+					{
+						private _action = MAZ_EP_userActions select _x;
+
+						private _circumferencePos = _forEachIndex * _intervals;
+				
+						private _xPos2D = 0.5 + _radius * cos(_circumferencePos);
+						private _yPos2D = 0.5 + _radius * sin(_circumferencePos);
+						private _pos = screenToWorld [_xPos2D, _yPos2D];
+
+						private _alignRight = true;
+						if(false) then {
+							_alignRight = false;
+						};
+
+						MAZ_EP_userActionsDrawn pushBack [_x,_pos,_alignRight];
+					}forEach _actionsToDraw;
+				};
+
+				MAZ_EP_fnc_destroyUserActions = {
+					MAZ_EP_userActionsDrawn = [];
+					if(!isNil "MAZ_EP_selectedUserAction") then {
+						private _action = MAZ_EP_userActions select MAZ_EP_selectedUserAction;
+						_action params ["_text","_condition","_actionCode","_icon","_childrenActions","_position"];
+						call _actionCode;
+						MAZ_EP_selectedUserAction = nil;
+					};
+				};
+
+				MAZ_EP_fnc_showUserActions = {
+					params [["_mode","self",[""]]];
+
+					if((getPos player distance MAZ_EP_userActionPlayerPos) > 0.3) exitWith {};
+
+					switch (_mode) do {
+						case "self": {
+
+						};
+						case "external": {
+
+						};
+					};
+					comment "private _cursorPos = positionCameraToWorld [0, 0, 2]";
+					private _cursorPos = screenToWorld [0.5,0.5];
+
+					private _centerDot = drawIcon3D ["a3\ui_f\data\igui\cfg\cursors\selectover_ca.paa",[0.8,0,0,1], _cursorPos, 1,1, 0];
+					if(isNil "MAZ_EP_userActionsDrawn") then {
+						MAZ_EP_userActionsDrawn = [];
+					};
+
+					if(count MAZ_EP_userActionsDrawn == 1 && {(MAZ_EP_userActionsDrawn select 0 select 0) == -1}) exitWith {
+						private _pos = MAZ_EP_userActionsDrawn select 0 select 1;
+						private _noActions = drawIcon3D [
+							"a3\ui_f\data\map\markers\military\dot_ca.paa",
+							[1,1,1,1], 
+							_pos, 
+							1, 
+							1, 
+							0, 
+							"No Actions", 
+							2, 
+							0.035, 
+							"PuristaMedium", 
+							"right", 
+							false, 
+							0, 
+							-0.025
+						];
+					};
+
+					private _closestAction = -1;
+					private _closestDrawPos = [];
+					private _closestValue = -1;
+					{
+						_x params ["_actionIndex","_drawPos","_alignRight"];
+
+						systemChat (str _x);
+						private _action = MAZ_EP_userActions select _actionIndex;
+						_action params ["_text","_condition","_actionCode","_icon","_childrenActions","_position"];
+
+						if(_alignRight) then {
+							private _icon = drawIcon3D [_icon,[1,1,1,1], _drawPos, 1, 1, 0, _text, 2, 0.035, "PuristaMedium", "right", false, 0, -0.025];
+						} else {
+							private _icon = drawIcon3D [_icon,[1,1,1,1], _drawPos, 1, 1, 0, _text, 2, 0.035, "PuristaMedium", "left", false, 0, -0.025];
+						};
+
+						private _distanceToCursor = [0.5,0.5] distance2D (worldToScreen _drawPos);
+						if(_distanceToCursor < 0.1 && (_distanceToCursor < _closestValue || _closestValue == -1)) then {
+							systemChat "Closest";
+							_closestAction = _actionIndex;
+							_closestDrawPos = _drawPos;
+							_closestValue = _distanceToCursor;
+						};
+					}forEach MAZ_EP_userActionsDrawn;
+
+					if(_closestAction != -1) then {
+						private _selectedIcon = drawIcon3D ["a3\ui_f\data\map\groupicons\selector_selected_ca.paa",[0.8,0,0,0.8], _closestDrawPos, 1, 1, 0];
+						MAZ_EP_selectedUserAction = _closestAction;
+					} else {
+						MAZ_EP_selectedUserAction = nil;
+					};
+				};
+				if(!isNil "MAZ_EP_MEH_Draw3D_UserAction") then {
+					removeMissionEventHandler ["Draw3D", MAZ_EP_MEH_Draw3D_UserAction];
+				};
+				MAZ_EP_MEH_Draw3D_UserAction = addMissionEventHandler ["Draw3D", {
+					if(missionNamespace getVariable ["MAZ_EP_userActionsShown",false]) then {
+						["self"] call MAZ_EP_fnc_showUserActions;
+					};
+				}];
+
+				if(!isNil "MAZ_EP_DEH_KeyDown_UserAction") then {
+					(findDisplay 46) displayRemoveEventHandler ["KeyDown",MAZ_EP_DEH_KeyDown_UserAction];
+				};
+				MAZ_EP_DEH_KeyDown_UserAction = (findDisplay 46) displayAddEventHandler ["KeyDown",{
+					params ["_displayOrControl", "_key", "_shift", "_ctrl", "_alt"];
+					if(_key != 	219 || MAZ_EP_userActionsShown) exitWith {};
+					if(!MAZ_EP_userActionsShown) then {
+						call MAZ_EP_fnc_createUserActions;
+					};
+				}];
+
+				if(!isNil "MAZ_EP_DEH_KeyUp_UserAction") then {
+					(findDisplay 46) displayRemoveEventHandler ["KeyUp",MAZ_EP_DEH_KeyUp_UserAction];
+				};
+				MAZ_EP_DEH_KeyUp_UserAction = (findDisplay 46) displayAddEventHandler ["KeyUp",{
+					params ["_displayOrControl", "_key", "_shift", "_ctrl", "_alt"];
+					if(_key != 	219) exitWith {};
+					MAZ_EP_userActionsShown = false;
+					call MAZ_EP_fnc_destroyUserActions;
+				}];
 			};
-			MAZ_EP_DEH_KeyUp_UserAction = (findDisplay 46) displayAddEventHandler ["KeyUp",{
-				params ["_displayOrControl", "_key", "_shift", "_ctrl", "_alt"];
-				if(_key != 	219) exitWith {};
-				MAZ_EP_userActionsShown = false;
-				call MAZ_EP_fnc_destroyUserActions;
-			}];
 
 		comment "Stackable inGameUISetEventHandler System";
 			MAZ_EP_StackedUIEHs = [];
@@ -2139,9 +2186,12 @@ private _value = (str {
 					private _savedVar = [_variableName,_value] call MAZ_EP_fnc_getSavedSettingFromProfile;
 					_this set [3,_savedVar];
 					[_this,{
+						waitUntil {!isNil "MAZ_EP_QueueObject"};
+						if(isNil "MAZ_EP_SettingsQueue") then {
+							MAZ_EP_SettingsQueue = createHashMapObject [MAZ_EP_QueueObject,[true]];
+						};
 						waitUntil {!isNil "MAZ_EP_fnc_addNewSetting"};
-						waitUntil {!isNil "MAZ_EP_fnc_addToExecQueue"};
-						[_this,MAZ_EP_fnc_addNewSetting] call MAZ_EP_fnc_addToExecQueue;
+						MAZ_EP_NotificationQueue call ["addToQueue",[_this,MAZ_EP_fnc_addNewSetting]];
 					}] remoteExec ['spawn',2];
 					"Ran on server";
 				};
@@ -2262,10 +2312,10 @@ private _value = (str {
 					showchat true;
 					MAZ_EP_settingsDialog = findDisplay -1;
 
-					private _maxWidth = 0.20625 * safezoneW;
+					private _maxWidth = 0.4125 * safezoneW;
 
-					private _contentGroup = MAZ_EP_settingsDialog ctrlCreate ["RscControlsGroupNoScrollbars",110];
-					_contentGroup ctrlSetPosition [0.396875 * safezoneW + safezoneX,0.269 * safezoneH + safezoneY,_maxWidth,0];
+					private _contentGroup = MAZ_EP_settingsDialog ctrlCreate ["RscControlsGroupNoHScrollbars",110];
+					_contentGroup ctrlSetPosition [(0.5 * safezoneW + safezoneX) - (_maxWidth / 2),0.269 * safezoneH + safezoneY,_maxWidth,0];
 					_contentGroup ctrlCommit 0;
 
 					private _bg = MAZ_EP_settingsDialog ctrlCreate ["RscPicture",-1,_contentGroup];
@@ -2298,9 +2348,9 @@ private _value = (str {
 						_settingBg ctrlCommit 0;
 
 						private _settingLabel = MAZ_EP_settingsDialog ctrlCreate ["RscText",-1,_settingGroup];
-						if(count _displayName > 17) then {
+						if(count _displayName > 34) then {
 							_tooltip = _displayName + "\n" + _tooltip;
-							_displayName = (_displayName select [0,17]) + "...";
+							_displayName = (_displayName select [0,34]) + "...";
 						};
 						_settingLabel ctrlSetText _displayName;
 						_settingLabel ctrlSetTooltip _tooltip;
@@ -2365,7 +2415,7 @@ private _value = (str {
 					};
 
 					private _cancelButton = MAZ_EP_settingsDialog ctrlCreate ["RscButtonMenu",-1];
-					_cancelButton ctrlSetPosition [0.396875 * safezoneW + safezoneX,1.1775,0.0567187 * safezoneW,0.022 * safezoneH];
+					_cancelButton ctrlSetPosition [(0.5 * safezoneW + safezoneX) - (_maxWidth / 2),1.1775,0.0567187 * safezoneW,0.022 * safezoneH];
 					_cancelButton ctrlSetStructuredText parseText "Cancel";
 					_cancelButton ctrlAddEventHandler ["ButtonClick", {
 						params ["_control"];
@@ -2375,7 +2425,7 @@ private _value = (str {
 					_cancelButton ctrlCommit 0;
 
 					private _confirmButton = MAZ_EP_settingsDialog ctrlCreate ["RscButtonMenu",-1];
-					_confirmButton ctrlSetPosition [0.546406 * safezoneW + safezoneX,1.1775,0.0567187 * safezoneW,0.022 * safezoneH];
+					_confirmButton ctrlSetPosition [(0.5 * safezoneW + safezoneX) + (_maxWidth / 2) - (0.0567187 * safezoneW),1.1775,0.0567187 * safezoneW,0.022 * safezoneH];
 					_confirmButton ctrlSetStructuredText parseText "Confirm";
 					_confirmButton ctrlAddEventHandler ["ButtonClick", {
 						params ["_control"];
