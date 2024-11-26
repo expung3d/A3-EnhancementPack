@@ -31,7 +31,7 @@ private _myJIPCode = "MAZ_EPSystem_ENV_JIP";
 	["[ENV] Enhanced Night Vision","Whether to enable the Enhanced Night Vision system.","MAZ_EP_enhancedNightVisionEnabled",true,"TOGGLE",[],"MAZ_ENV"] call MAZ_EP_fnc_addNewSetting;
 	["[ENV] 3PP on Foot","Whether to allow players to use 3rd person on foot with night vision.","MAZ_ENV_allowThirdPersonFoot",false,"TOGGLE",[],"MAZ_ENV"] call MAZ_EP_fnc_addNewSetting;
 	["[ENV] 3PP in Vehicles","Whether to allow players to use 3rd person in vehicles with night vision.","MAZ_ENV_allowThirdPersonVehicles",true,"TOGGLE",[],"MAZ_ENV"] call MAZ_EP_fnc_addNewSetting;
-	["[ENV] SNR","The Signal to Noise Ratio of the night vision used.","MAZ_ENV_snrValue",28,"SLIDER",[25,35],"MAZ_ENV"] call MAZ_EP_fnc_addNewSetting;
+	["[ENV] SNR","The Signal to Noise Ratio of the night vision used (the graininess). Higher value means less grain.","MAZ_ENV_snrValue",28,"SLIDER",[25,35],"MAZ_ENV"] call MAZ_EP_fnc_addNewSetting;
 };
 
 private _value = (str {
