@@ -29,7 +29,9 @@ private _myJIPCode = "MAZ_EPSystem_ENV_JIP";
 [] spawn {
 	waitUntil {!isNil "MAZ_EP_fnc_addNewSetting"};
 	["[ENV] Enhanced Night Vision","Whether to enable the Enhanced Night Vision system.","MAZ_EP_enhancedNightVisionEnabled",true,"TOGGLE",[],"MAZ_ENV"] call MAZ_EP_fnc_addNewSetting;
+	["[ENV] 3PP on Foot","Whether to allow players to use 3rd person on foot with night vision.","MAZ_ENV_allowThirdPersonFoot",false,"TOGGLE",[],"MAZ_ENV"] call MAZ_EP_fnc_addNewSetting;
 	["[ENV] 3PP in Vehicles","Whether to allow players to use 3rd person in vehicles with night vision.","MAZ_ENV_allowThirdPersonVehicles",true,"TOGGLE",[],"MAZ_ENV"] call MAZ_EP_fnc_addNewSetting;
+	["[ENV] SNR","The Signal to Noise Ratio of the night vision used.","MAZ_ENV_snrValue",28,"SLIDER",[25,35],"MAZ_ENV"] call MAZ_EP_fnc_addNewSetting;
 };
 
 private _value = (str {
@@ -162,7 +164,7 @@ private _value = (str {
 			if(!MAZ_EP_enhancedNightVisionEnabled) exitWith {true};
 			if((currentVisionMode player) == 0) exitWith {true};
 			private _veh = vehicle player;
-			if(_veh == player) exitWith {false};
+			if(_veh == player) exitWith {MAZ_ENV_allowThirdPersonFoot};
 			if(MAZ_ENV_allowThirdPersonVehicles) exitWith {true};
 			false;
 		};
@@ -259,7 +261,7 @@ private _value = (str {
 			if(_ir) then {
 				_showInDay = false;
 				_lightColor = [1,1,1];
-				_intensity = 20;
+				_intensity = 100;
 			};
 			_light = "#lightreflector" createVehicle [0,0,0];
 			player setVariable ["MAZ_ENV_adminLight",_light,true];
@@ -268,9 +270,29 @@ private _value = (str {
 			[_light,_lightColor] remoteExec ["setLightAmbient",0,_light];
 			[_light,_intensity] remoteExec ["setLightIntensity",0,_light];
 			[_light,[2,4,4,0,9,10]] remoteExec ["setLightAttenuation",0,_light];
-			[_light,[45,10,2.5]] remoteExec ["setLightConePars",0,_light];
-			_light attachTo [player, [0.3,-0.5,0.15], "head", true];
-			_light setDir -20;
+			[_light,[45,10,3.5]] remoteExec ["setLightConePars",0,_light];
+			["MAZ_SEH_EachFrame_AdminLight","onEachFrame"] call BIS_fnc_removeStackedEventHandler;
+			["MAZ_SEH_EachFrame_AdminLight", "onEachFrame", {
+				private _light = player getVariable ["MAZ_ENV_adminLight",objNull];
+				if(!isNull _light) then {
+					private _cameraVector = getCameraViewDirection player;
+					private _dir = if(true) then 
+					{
+						[0,0,0] getdir _cameraVector;
+					} else {
+						[0,0,0] getdir (eyeDirection _unit);
+					};
+
+					private _offsetVector = [-0.124,-0.060,-0.008];
+					private _pitch = (_cameraVector select 2) * 90;
+					private _vuz = cos _pitch;	
+					_light setVectorDirAndUp [ [(sin _dir) * _vuz,(cos _dir) * _vuz,sin _pitch], [0,0,_vuz] ];	
+
+					private _vdir = [0,0,0] getdir (eyeDirection player);
+					_light setPosASL ((eyePos player) vectorAdd [((_offsetVector select 0) * cos _vdir) + ((_offsetVector select 1) * sin _vdir), 
+					(((_offsetVector select 1) * cos _vdir) - (_offsetVector select 0) * sin _vdir), _offsetVector select 2]); 
+				};
+			}] call BIS_fnc_addStackedEventHandler;
 		};
 
 		MAZ_ENV_fnc_attachStrobeLightToHelmet = {
@@ -289,6 +311,7 @@ private _value = (str {
 			if (_currentLightClass == "") exitWith {["Cannot attach your current grenade."] call MAZ_EP_fnc_systemMessage};
 			private _attachedLight = _currentLightClass createVehicle position player;
 			_attachedLight attachto [player, [0,-0.08,.125], 'pilot',true];
+			_attachedLight disableCollisionWith player;
 			player removeItem _currentLight;
 		};
 		
@@ -444,7 +467,7 @@ private _value = (str {
 			waitUntil {!isNil "MAZ_fnc_newKeybind"};
 			MAZ_Key_ENV_ToggleIRIlluminator = ["Toggle IR Illuminator","Turn on or off the IR Illuminator.",38,{call MAZ_ENV_fnc_toggleIRIlluminator;},false,true,false,false,false,"MAZ_IRIllum"] call MAZ_fnc_newKeybind;
 			MAZ_Key_ENV_ToggleIRIlluminatorDiffuseMode = ["Toggle IR Diffuser","Turn on or off the IR diffuser.",38,{call MAZ_ENV_fnc_toggleIRIlluminatorDiffuseMode;},false,false,true,false,false,"MAZ_IRIllumMode"] call MAZ_fnc_newKeybind;
-			comment 'MAZ_Key_ENV_AttachLight = ["Attach Light","Attach current selected IR or chem Light to helmet.",35,{[] spawn MAZ_ENV_fnc_attachStrobeLightToHelmet;},false,false,true] call MAZ_fnc_newKeybind'; 
+			'MAZ_Key_ENV_AttachLight = ["Attach Light","Attach current selected IR or chem Light to helmet.",35,{[] spawn MAZ_ENV_fnc_attachStrobeLightToHelmet;},false,false,true] call MAZ_fnc_newKeybind'; 
 		};
 
 		if(isServer) then {
