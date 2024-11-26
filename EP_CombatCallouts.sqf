@@ -342,34 +342,10 @@ private _value = (str {
 		};
 
 		MAZ_getDirectionForCallout = {
-			private _return = "";
-			private _dir = getDir player;
-			
-			if(_dir < 22.5 || 337.5 < _dir) then {
-				_return = "north";
-			};
-			if(_dir > 292.5 && 337.5 > _dir) then {
-				_return = "northwest";
-			};
-			if(_dir < 292.5 && 247.5 < _dir) then {
-				_return = "west";
-			};
-			if(_dir > 202.5 && 247.5 > _dir) then {
-				_return = "southwest";
-			};
-			if(_dir < 202.5 && 157.5 < _dir) then {
-				_return = "south";
-			};
-			if(_dir > 112.5 && 157.5 > _dir) then {
-				_return = "southeast";
-			};
-			if(_dir < 112.5 && 67.5 < _dir) then {
-				_return = "east";
-			};
-			if(_dir > 22.5 && 67.5 > _dir) then {
-				_return = "northeast";
-			};
-			_return
+			private _cardinals = ["north","northeast","east","southeast","south","southwest","west","northwest","north"];
+			private _index = round ((getDir player) * 8 / 360);
+
+			_cardinals select _index
 		};
 
 		MAZ_callDirection = {
@@ -1086,12 +1062,12 @@ missionNamespace setVariable [_varName,_value,true];
 		params ["_killed", "_killer"];
 		if(!MAZ_EP_CC_combatCalloutsEnabled || !MAZ_EP_CC_callKillToggle) exitWith {};
 		if (((side (group _killed)) != (side (group _killer))) && isPlayer _killer) then {
-			if((side (group _killed) == civilian) && _killed isKindOf "Man") exitWith {
+			if((side (group _killed) == civilian) && _killed isKindOf "CAManBase") exitWith {
 				[[],{
-					[player,"F##k! I accidentally killed a civilian!"] remoteExec ['sideChat',0];
+					[player,"F##k! I accidentally killed a civilian!"] remoteExec ['sideChat'];
 				}] remoteExec ["spawn",owner (_killer)];
 			};
-			if(_killed isKindOf "Man") then {
+			if(_killed isKindOf "CAManBase") then {
 				[[], {
 					if(!MAZ_EP_CC_delayToCallKill) then {
 						[] spawn MAZ_scratchOneCall;
