@@ -1692,7 +1692,6 @@ private _value = (str {
 						} else {
 							if(_queueStarted && !_stopQueue) then {
 								_stopQueue = true;
-								systemChat "End of queue";
 							};
 						};
 					};
