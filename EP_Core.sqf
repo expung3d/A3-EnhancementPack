@@ -2183,6 +2183,14 @@ private _value = (str {
 				if !(_type in ["TOGGLE","SLIDER"]) exitWith {false};
 				if (!isServer) exitWith {
 					private _savedVar = [_variableName,_value] call MAZ_EP_fnc_getSavedSettingFromProfile;
+					if((_this select 4) == "SLIDER") then {
+						(_this select 5) params ["_min","_max"];
+						private _temp = _savedVar;
+						_savedVar = [_savedVar,_min,_max] call BIS_fnc_clamp;
+						if(_savedVar != _temp) then {
+							systemChat (format ["[ Settings Alert ] : Your setting %1 was outside of the allowed bounds.",_this select 0]);
+						};
+					};
 					_this set [3,_savedVar];
 					[_this,{
 						waitUntil {!isNil "MAZ_EP_QueueObject"};
@@ -2613,8 +2621,6 @@ missionNamespace setVariable [_varName,_value,true];
 	["Auto HALO Altitude","The altitude at which players will be automatically equipped with a parachute.","MAZ_EP_autoHALOHeight",1000,"SLIDER",[300,2000]] call MAZ_EP_fnc_addNewSetting;
 	["Disable Respawn Tents","Whether to remove respawn tents from player loadouts.","MAZ_EP_DisableRespawnTents",true,"TOGGLE",[]] call MAZ_EP_fnc_addNewSetting;
 };
-
-comment "Add faster swimming";
 
 comment "
 Cool stuff:
