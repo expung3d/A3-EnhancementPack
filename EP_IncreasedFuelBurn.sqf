@@ -29,8 +29,8 @@ private _myJIPCode = "MAZ_EPSystem_IFU_JIP";
 [] spawn {
 	waitUntil {!isNil "MAZ_EP_fnc_addNewSetting"};
 	["Increased Fuel Burn","Whether to enable the Increased Fuel Burn system.","MAZ_EP_increaseFuelUse",true,"TOGGLE",[],"MAZ_IFB"] call MAZ_EP_fnc_addNewSetting;
-	["Wheeled Fuel Consumption Rate","The rate at which wheeled vehicles burn fuel.\nMultiply the normal burn rate by this value.","MAZ_fuelConsumptionRateWheeled",2,"SLIDER",[1,10],"MAZ_IFB"] call MAZ_EP_fnc_addNewSetting;
-	["Tracked Fuel Consumption Rate","The rate at which tracked vehicles burn fuel.\nMultiply the normal burn rate by this value.","MAZ_fuelConsumptionRateTracked",4,"SLIDER",[1,10],"MAZ_IFB"] call MAZ_EP_fnc_addNewSetting;
+	["Wheeled Fuel Consumption Rate","The rate at which wheeled vehicles burn fuel.\nMultiply the normal burn rate by this value.","MAZ_fuelConsumptionRateWheeled",3,"SLIDER",[1,5],"MAZ_IFB"] call MAZ_EP_fnc_addNewSetting;
+	["Tracked Fuel Consumption Rate","The rate at which tracked vehicles burn fuel.\nMultiply the normal burn rate by this value.","MAZ_fuelConsumptionRateTracked",2,"SLIDER",[1,5],"MAZ_IFB"] call MAZ_EP_fnc_addNewSetting;
 	["Plane Fuel Consumption Rate","The rate at which planes burn fuel.\nMultiply the normal burn rate by this value.","MAZ_fuelConsumptionRatePlane",8,"SLIDER",[1,15],"MAZ_IFB"] call MAZ_EP_fnc_addNewSetting;
 	["Heli Fuel Consumption Rate","The rate at which helicopters burn fuel.\nMultiply the normal burn rate by this value.","MAZ_fuelConsumptionRateHeli",6,"SLIDER",[1,15],"MAZ_IFB"] call MAZ_EP_fnc_addNewSetting;
 };
@@ -47,18 +47,26 @@ private _value = (str {
 				private _type = typeOf _veh;
 				private _fuelCapacityMax = getNumber (configfile >> "CfgVehicles" >> _type >> "fuelCapacity");
 				private _fuelConsumptionRate = getNumber (configfile >> "CfgVehicles" >> _type >> "fuelConsumptionRate");
-				if(_type isKindOf "Car") then {
+				if(_type isKindOf "LandVehicle") then {
 					if(_type isKindOf "Tank") then {
-						_veh setFuel ((fuel _veh) - (_fuelConsumptionRate/_fuelCapacityMax * MAZ_fuelConsumptionRateTracked));
+						if(MAZ_fuelConsumptionRateTracked > 1) then {
+							_veh setFuel ((fuel _veh) - (_fuelConsumptionRate/_fuelCapacityMax * (0.05 * MAZ_fuelConsumptionRateTracked)));
+						};
 					} else {
-						_veh setFuel ((fuel _veh) - (_fuelConsumptionRate/_fuelCapacityMax * MAZ_fuelConsumptionRateWheeled));
+						if(MAZ_fuelConsumptionRateWheeled > 1) then {
+							_veh setFuel ((fuel _veh) - (_fuelConsumptionRate/_fuelCapacityMax * (0.05 * MAZ_fuelConsumptionRateWheeled)));
+						};
 					};
 				};
 				if(_type isKindOf "Plane") then {
-					_veh setFuel ((fuel _veh) - (_fuelConsumptionRate/_fuelCapacityMax * MAZ_fuelConsumptionRatePlane));
+					if(MAZ_fuelConsumptionRatePlane > 1) then {
+						_veh setFuel ((fuel _veh) - (_fuelConsumptionRate/_fuelCapacityMax * (0.10 * MAZ_fuelConsumptionRatePlane)));
+					};
 				};
 				if(_type isKindOf "Helicopter") then {
-					_veh setFuel ((fuel _veh) - (_fuelConsumptionRate/_fuelCapacityMax * MAZ_fuelConsumptionRateHeli));
+					if(MAZ_fuelConsumptionRateHeli > 1) then {
+						_veh setFuel ((fuel _veh) - (_fuelConsumptionRate/_fuelCapacityMax * (0.10 * MAZ_fuelConsumptionRateHeli)));
+					};
 				};
 			};
 		};
