@@ -94,6 +94,7 @@ private _value = (str {
 			"H_HelmetHBK_F",
 			"H_HelmetB",
 			"H_HelmetB_black",
+			"H_HelmetB_camo",
 			"H_HelmetB_desert",
 			"H_HelmetB_grass",
 			"H_HelmetB_sand",
@@ -182,12 +183,12 @@ private _value = (str {
 			player setVariable ["MAZ_ENV_irIllum",_light,true];
 			[[_light,_intensity], {
 				params ["_light","_intensity"];
-				[_light,false] remoteExec ["setLightDayLight",0,_light];
-				[_light,true] remoteExec ["setLightIR",0,_light];
-				[_light,[1,1,1]] remoteExec ["setLightAmbient",0,_light];
-				[_light,false] remoteExec ["setLightUseFlare",0,_light];
-				[_light,_intensity] remoteExec ["setLightIntensity",0,_light];
-				[_light,[30,3,1.5]] remoteExec ["setLightConePars",0,_light];
+				_light setLightDayLight false;
+				_light setLightIR true;
+				_light setLightAmbient [1,1,1];
+				_light setLightUseFlare false;
+				_light setLightIntensity _intensity;
+				_light setLightConePars [30,3,1.5];
 			}] remoteExec ['spawn',0,_light];
 			_light attachTo [player,[0.036,0.2,0.1],"proxy:\a3\characters_f\proxies\weapon.001",true];
 			comment 'player modelToWorld  (player selectionPosition "proxy:\a3\characters_f\proxies\weapon.001")';
@@ -208,12 +209,12 @@ private _value = (str {
 						};
 						[[_this,_intensity], {
 							params ["_light","_intensity"];
-							[_light,false] remoteExec ["setLightDayLight",0,_light];
-							[_light,true] remoteExec ["setLightIR",0,_light];
-							[_light,[1,1,1]] remoteExec ["setLightAmbient",0,_light];
-							[_light,false] remoteExec ["setLightUseFlare",0,_light];
-							[_light,_intensity] remoteExec ["setLightIntensity",0,_light];
-							[_light,[30,3,1.5]] remoteExec ["setLightConePars",0,_light];
+							_light setLightDayLight false;
+							_light setLightIR true;
+							_light setLightAmbient [1,1,1];
+							_light setLightUseFlare false;
+							_light setLightIntensity _intensity;
+							_light setLightConePars [30,3,1.5];
 						}] remoteExec ['spawn',0,_this];
 					};
 					sleep 0.1;
@@ -240,11 +241,13 @@ private _value = (str {
 				private _diffuseMode = player getVariable ["MAZ_ENV_irIllumDiffuse",false];
 				[_diffuseMode] call MAZ_ENV_fnc_createIRIlluminator;
 			};
+			playSound3D ['a3\sounds_f_epb\weapons\noise\switch_mod_01.wss', player,false,getPosASL player,5,1,2];
 		};
 
 		MAZ_ENV_fnc_toggleIRIlluminatorDiffuseMode = {
 			private _diffuseMode = player getVariable ["MAZ_ENV_irIllumDiffuse",false];
 			player setVariable ["MAZ_ENV_irIllumDiffuse",!_diffuseMode];
+			playSound3D ['a3\sounds_f_epb\weapons\noise\switch_mod_01.wss', player,false,getPosASL player,5,1,2];
 		};
 
 		MAZ_ENV_fnc_createAdminLight = {
@@ -274,9 +277,15 @@ private _value = (str {
 		};
 
 		MAZ_ENV_fnc_attachStrobeLightToHelmet = {
+			if(!alive player) exitWith {};
+			if (!isNil "MAZ_ENV_attachedStrobe" && {!isNull MAZ_ENV_attachedStrobe}) exitwith {
+				call MAZ_ENV_fnc_deleteAttachedStrobeLight;
+				["You turned off your IR Strobe."] call MAZ_EP_fnc_systemMessage;
+			};
 			private _headGear = headgear player;
 			if (!(_headGear in MAZ_ENV_strobeCompatibleHelmets)) exitwith {["Not wearing a compatible helmet.","addItemFailed"] call MAZ_EP_fnc_systemMessage};			
-			private _currentLight = currentThrowable player select 0; 
+			private _currentLight = currentThrowable player select 0;
+			if (isNil "_currentLight") exitWith {["You do not have a IR strobe!"] call MAZ_EP_fnc_systemMessage};
 			private _currentLightClass = switch (_currentLight) do
 			{
 				case "B_IR_Grenade": {"B_IRStrobe"};
@@ -286,27 +295,83 @@ private _value = (str {
 				case "I_IR_Grenade": {"I_IRStrobe"};
 				default {""}
 			}; 
-			if (_currentLightClass == "") exitWith {["Cannot attach your current grenade."] call MAZ_EP_fnc_systemMessage};
-			private _attachedLight = _currentLightClass createVehicle position player;
-			_attachedLight attachto [player, [0,-0.08,.125], 'pilot',true];
+			if (_currentLightClass == "") exitWith {["Cannot attach your current throwable."] call MAZ_EP_fnc_systemMessage};
+			MAZ_ENV_attachedStrobe = _currentLightClass createVehicle position player;
+			call MAZ_ENV_fnc_attachStrobe;
+			playSound3D ['A3\Sounds_F_Orange\MissionSFX\Orange_Start_Sim.wss', player,false,getPosASL player,5,1,5,1];
 			player removeItem _currentLight;
+
+			if(!isNil "MAZ_ENV_EH_Killed_Strobe") then {
+				player removeEventHandler ["Killed",MAZ_ENV_EH_Killed_Strobe];	
+			};
+			MAZ_ENV_EH_Killed_Strobe = player addEventHandler ["Killed", {
+				call MAZ_ENV_fnc_deleteAttachedStrobeLight;
+			}];
+			if(!isNil "MAZ_ENV_EH_GetInMan_IRStrobe") then {
+				player removeEventHandler ["GetInMan",MAZ_ENV_EH_GetInMan_IRStrobe];
+			};
+			MAZ_ENV_EH_GetInMan_IRStrobe = player addEventHandler ["GetInMan", {
+				if (isNil "MAZ_ENV_attachedStrobe" || {isNull MAZ_ENV_attachedStrobe}) exitwith {};
+				detach MAZ_ENV_attachedStrobe;
+				MAZ_ENV_attachedStrobe setPos [0,0,0];
+			}];
+			if(!isNil "MAZ_ENV_EH_GetOutMan_IRStrobe") then {
+				player removeEventHandler ["GetOutMan",MAZ_ENV_EH_GetOutMan_IRStrobe];
+			};
+			MAZ_ENV_EH_GetOutMan_IRStrobe = player addEventHandler ["GetOutMan", {
+				if (isNil "MAZ_ENV_attachedStrobe" || {isNull MAZ_ENV_attachedStrobe}) exitwith {};
+				call MAZ_ENV_fnc_attachStrobe;
+			}];
+
+			private _timeToDelete = time + 300;
+			while {!isNull MAZ_ENV_attachedStrobe} do {
+				if(time >= _timeToDelete) then {
+					private _type = typeOf MAZ_ENV_attachedStrobe;
+					call MAZ_ENV_fnc_deleteAttachedStrobeLight;
+					MAZ_ENV_attachedStrobe = _type createVehicle [0,0,0];
+					call MAZ_ENV_fnc_attachStrobe;
+					_timeToDelete = time + 300;
+				};
+				sleep 1;
+			};
 		};
-		
+
+		MAZ_ENV_fnc_attachStrobe = {
+			MAZ_ENV_attachedStrobe attachto [player, [0,-0.08,0.125], "pilot",true];
+		};
+
+		MAZ_ENV_fnc_deleteAttachedStrobeLight = {
+			if(!isNil "MAZ_ENV_EH_Killed_Strobe") then {
+				player removeEventHandler ["Killed",MAZ_ENV_EH_Killed_Strobe];	
+			};
+			if(!isNil "MAZ_ENV_EH_GetOutMan_IRStrobe") then {
+				player removeEventHandler ["GetOutMan",MAZ_ENV_EH_GetOutMan_IRStrobe];
+			};
+			if(!isNil "MAZ_ENV_EH_GetInMan_IRStrobe") then {
+				player removeEventHandler ["GetInMan",MAZ_ENV_EH_GetInMan_IRStrobe];
+			};
+			deleteVehicle (nearestObject [getPos MAZ_ENV_attachedStrobe, "nvg_targetC"]);
+			deleteVehicle MAZ_ENV_attachedStrobe;
+			if(alive player) then {
+				playSound3D ['A3\Sounds_F_Orange\MissionSFX\Orange_Start_Sim.wss', player,false,getPosASL player,5,1,5,1];
+			};
+		};
+
 		MAZ_pointShootOnKeyDown = {
 			params ["_displayOrControl", "_key", "_shift", "_ctrl", "_alt"];
 			if(_key != 42) exitWith {};
-			if (!(missionNamespace getVariable ["MAZ_TAG_heldDown",false]) && !(missionNamespace getVariable ["MAZ_TAG_holdBreathCooldown",false])) then {
-				MAZ_TAG_heldDown = true;
+			if (!(missionNamespace getVariable ["MAZ_ENV_heldDown",false]) && !(missionNamespace getVariable ["MAZ_ENV_holdBreathCooldown",false])) then {
+				MAZ_ENV_heldDown = true;
 				player setCustomAimCoef 0.3;
 				MAZ_holdBreathTime = time;
 			};
-			if((time - MAZ_holdBreathTime) > 5 && !(missionNamespace getVariable ["MAZ_TAG_holdBreathCooldown",false])) then {
+			if((time - MAZ_holdBreathTime) > 5 && !(missionNamespace getVariable ["MAZ_ENV_holdBreathCooldown",false])) then {
 				player setCustomAimCoef 1;
-				MAZ_TAG_holdBreathCooldown = true;
-				MAZ_TAG_heldDown = false;
+				MAZ_ENV_holdBreathCooldown = true;
+				MAZ_ENV_heldDown = false;
 				0 = [] spawn {
 					sleep (4 + (random 3));
-					MAZ_TAG_holdBreathCooldown = false;
+					MAZ_ENV_holdBreathCooldown = false;
 					player setCustomAimCoef 1;
 				};
 			};
@@ -315,9 +380,9 @@ private _value = (str {
 		MAZ_pointShootOnKeyUp = {
 			params ["_displayOrControl", "_key", "_shift", "_ctrl", "_alt"];
 			if(_key != 42) exitWith {};
-			if (missionNamespace getVariable ["MAZ_TAG_heldDown",false]) then {
+			if (missionNamespace getVariable ["MAZ_ENV_heldDown",false]) then {
 				player setCustomAimCoef 1;
-				missionNamespace setVariable ["MAZ_TAG_heldDown",false];
+				missionNamespace setVariable ["MAZ_ENV_heldDown",false];
 			};
 		};
 
@@ -358,6 +423,15 @@ private _value = (str {
 			};
 		}];
 
+		
+		MAZ_ENV_fnc_toggleWhitePhosor= {
+			private _whitePhosor = player getVariable "MAZ_ENV_toggleWhitePhosor";
+			player setVariable ["MAZ_ENV_toggleWhitePhosor",(!_whitePhosor)];
+			playSound3D ['a3\sounds_f_mark\arsenal\sfx\bipods\bipod_op_down.wss', player,false,getPosASL player,5,1,2];
+		};
+		player setVariable ["MAZ_ENV_toggleWhitePhosor",false];
+
+
 		MAZ_ENV_MEH_Draw3D_WhitePhosphor = addMissionEventHandler ["Draw3D", {
 			call {
 				if(!MAZ_EP_enhancedNightVisionEnabled) exitWith {MAZ_PP_ColorCorrect_NVG ppEffectEnable false;};
@@ -377,7 +451,7 @@ private _value = (str {
 					MAZ_PP_FilmGrain_NVG ppEffectAdjust [_grainIntensity,_sharpness,1,0.64,0.24,true];
 					MAZ_PP_FilmGrain_NVG ppEffectCommit 0;
 				};
-				if(currentVisionMode player == 1 && ((assignedItems player) findIf {_x in ["NVGogglesB_blk_F","NVGogglesB_grn_F","NVGogglesB_gry_F"]}) != -1) then {
+				if(currentVisionMode player == 1 && (player getVariable ["MAZ_ENV_toggleWhitePhosor",false])) then {
 					if(isNil "MAZ_PP_ColorCorrect_NVG") then {
 						MAZ_PP_ColorCorrect_NVG = ppEffectCreate ["ColorCorrections",1500];
 					};
@@ -407,7 +481,8 @@ private _value = (str {
 			params ["_person", "_visionMode", "_TIindex", "_visionModePrev", "_TIindexPrev", "_vehicle", "_turret"];
 			if(!MAZ_EP_enhancedNightVisionEnabled) exitWith {};
 			if(_visionModePrev == 0) then {
-				playSound3D ['A3\ui_f_curator\data\sound\CfgSound\visionMode.wss', _person,false,getPosASL _person,5,1,5];
+				playSound3D ['A3\ui_f_curator\data\sound\CfgSound\visionMode.wss', _person,false,getPosASL _person,5,1,2];
+				playSound3D ['a3\sounds_f_mark\arsenal\sfx\bipods\bipod_op_down.wss', _person,false,getPosASL _person,5,1,2];
 				if !(call MAZ_ENV_fnc_canEnter3PP) then {
 					if(cameraView == "External") then {
 						player switchCamera "Internal";
@@ -442,9 +517,10 @@ private _value = (str {
 			waitUntil {uisleep 0.1;!isNull (findDisplay 46) && alive player};
 			sleep 0.1;
 			waitUntil {!isNil "MAZ_fnc_newKeybind"};
-			MAZ_Key_ENV_ToggleIRIlluminator = ["Toggle IR Illuminator","Turn on or off the IR Illuminator.",38,{call MAZ_ENV_fnc_toggleIRIlluminator;},false,true,false,false,false,"MAZ_IRIllum"] call MAZ_fnc_newKeybind;
-			MAZ_Key_ENV_ToggleIRIlluminatorDiffuseMode = ["Toggle IR Diffuser","Turn on or off the IR diffuser.",38,{call MAZ_ENV_fnc_toggleIRIlluminatorDiffuseMode;},false,false,true,false,false,"MAZ_IRIllumMode"] call MAZ_fnc_newKeybind;
-			comment 'MAZ_Key_ENV_AttachLight = ["Attach Light","Attach current selected IR or chem Light to helmet.",35,{[] spawn MAZ_ENV_fnc_attachStrobeLightToHelmet;},false,false,true] call MAZ_fnc_newKeybind'; 
+			MAZ_Key_ENV_ToggleIRIlluminator = ["Toggle IR Illuminator","Turn on or off the IR Illuminator.",38,{call MAZ_ENV_fnc_toggleIRIlluminator;},false,true,false,true,false,"MAZ_IRIllum"] call MAZ_fnc_newKeybind;
+			MAZ_Key_ENV_ToggleIRIlluminatorDiffuseMode = ["Toggle IR Diffuser","Turn on or off the IR diffuser.",38,{call MAZ_ENV_fnc_toggleIRIlluminatorDiffuseMode;},false,false,true,true,false,"MAZ_IRIllumMode"] call MAZ_fnc_newKeybind;
+			MAZ_Key_ENV_AttachStrobe = ["Toggle Attached Strobe","Attach/Detach current selected IR strobe to helmet.",34,{[] spawn MAZ_ENV_fnc_attachStrobeLightToHelmet;},false,false,true,true,false,"MAZ_IRStrobe"] call MAZ_fnc_newKeybind; 
+			'MAZ_Key_ENV_WhitePhosphor = ["White Phosphor NVG","Toggles the white phosphor on NVGs.",49,{call MAZ_ENV_fnc_toggleWhitePhosor;},false,true,false,true,false,"MAZ_phosphor"] call MAZ_fnc_newKeybind';
 		};
 
 		if(isServer) then {
@@ -460,10 +536,11 @@ private _value = (str {
 				"Dynamic grain and brightness for NVGs",
 				"Cannot use magnified optics with NVGs, only 1x sights",
 				"NVGs force you into first person, except for in vehicles",
-				"White phosphor tubes in ENVGs",
 				"Thermal night vision is disabled",
+				"Optional white phosphor Tubes (Default CTRL + N)",
 				"IR Illuminators are built into the PEQ lasers (Default CTRL + L)",
 				"Adds holding breath for point shooting with lasers (Default hold Shift)",
+				"Adds attachable IR strobes for helmets (Default ALT + G)",
 				"Evens the playing field at nighttime by making AI slightly dumber"
 			]
 		] call MAZ_EP_fnc_addDiaryRecord;
