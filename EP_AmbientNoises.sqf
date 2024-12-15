@@ -162,15 +162,15 @@ private _value = (str {
 			(call MAZ_AE_fnc_getGForces) params ["_current","_avgStr"];
 			private _fatigue = 1 - _avgStr;
 			private _randomSleep = (selectRandom [2.5,2.75,3,3.25,3.5]) * _fatigue;
-			if(_randomSleep < 1.25) then {
-				_randomSleep = 1.25;
+			if(_randomSleep < 1.5) then {
+				_randomSleep = 1.5;
 			};
 			MAZ_AN_gasMaskTime = time + _randomSleep;
 		} else {
 			private _fatigue = 1 - (getFatigue player);
 			private _randomSleep = (selectRandom [2.5,2.75,3,3.25,3.5]) * _fatigue;
-			if(_randomSleep < 1.25) then {
-				_randomSleep = 1.25;
+			if(_randomSleep < 1.5) then {
+				_randomSleep = 1.5;
 			};
 			MAZ_AN_gasMaskTime = time + _randomSleep;
 		};
