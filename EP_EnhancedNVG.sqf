@@ -241,13 +241,23 @@ private _value = (str {
 				private _diffuseMode = player getVariable ["MAZ_ENV_irIllumDiffuse",false];
 				[_diffuseMode] call MAZ_ENV_fnc_createIRIlluminator;
 			};
-			playSound3D ['a3\sounds_f_epb\weapons\noise\switch_mod_01.wss', player,false,getPosASL player,5,1,2];
+			playSound3D ['a3\sounds_f_epb\weapons\noise\switch_mod_01.wss', player,false,getPosASL player,5,1,3];
 		};
 
 		MAZ_ENV_fnc_toggleIRIlluminatorDiffuseMode = {
+			private _currentWep = currentWeapon player;
+			private _attachments = player weaponAccessories _currentWep;
+			if !("acc_pointer_IR" in _attachments) exitWith {};
 			private _diffuseMode = player getVariable ["MAZ_ENV_irIllumDiffuse",false];
 			player setVariable ["MAZ_ENV_irIllumDiffuse",!_diffuseMode];
-			playSound3D ['a3\sounds_f_epb\weapons\noise\switch_mod_01.wss', player,false,getPosASL player,5,1,2];
+			playSound3D ['a3\sounds_f_epb\weapons\noise\switch_mod_01.wss', player,false,getPosASL player,5,1,3];
+		};
+
+		MAZ_ENV_fnc_toggleLaserSound = {
+			private _currentWep = currentWeapon player;
+			private _attachments = player weaponAccessories _currentWep;
+			if !("acc_pointer_IR" in _attachments || "acc_flashlight" in _attachments) exitWith {};
+			playSound3D ['a3\sounds_f_epb\weapons\noise\switch_mod_01.wss', player,false,getPosASL player,5,1,3];
 		};
 
 		MAZ_ENV_fnc_createAdminLight = {
@@ -278,16 +288,18 @@ private _value = (str {
 
 		MAZ_ENV_fnc_attachStrobeLightToHelmet = {
 			if(!alive player) exitWith {};
+            if(vehicle player != player) exitwith {["Cannot attach IR Strobes while in vehicles"] call MAZ_EP_fnc_systemMessage};
 			if (!isNil "MAZ_ENV_attachedStrobe" && {!isNull MAZ_ENV_attachedStrobe}) exitwith {
 				call MAZ_ENV_fnc_deleteAttachedStrobeLight;
+				call MAZ_ENV_fnc_removeStrobeEH;
 				["You turned off your IR Strobe."] call MAZ_EP_fnc_systemMessage;
+                playSound3D ['A3\Sounds_F_Orange\MissionSFX\Orange_Start_Sim.wss', player,false,getPosASL player,5,1,7.5,1];
+				player addItem MAZ_ENV_strobeThrowable;
 			};
-			private _headGear = headgear player;
-			if (!(_headGear in MAZ_ENV_strobeCompatibleHelmets)) exitwith {["Not wearing a compatible helmet.","addItemFailed"] call MAZ_EP_fnc_systemMessage};			
-			private _currentLight = currentThrowable player select 0;
-			if (isNil "_currentLight") exitWith {["You do not have a IR strobe!"] call MAZ_EP_fnc_systemMessage};
-			private _currentLightClass = switch (_currentLight) do
-			{
+			if (!((headgear player) in MAZ_ENV_strobeCompatibleHelmets)) exitwith {["Not wearing a compatible helmet.","addItemFailed"] call MAZ_EP_fnc_systemMessage};
+			private _throwable = currentThrowable player;
+			if(count _throwable == 0) exitWith {["You don't have any grenades!"] call MAZ_EP_fnc_systemMessage};
+			private _currentLightClass = switch (_throwable select 0) do {
 				case "B_IR_Grenade": {"B_IRStrobe"};
 				case "O_R_IR_Grenade";
 				case "O_IR_Grenade": {"O_IRStrobe"};
@@ -296,99 +308,202 @@ private _value = (str {
 				default {""}
 			}; 
 			if (_currentLightClass == "") exitWith {["Cannot attach your current throwable."] call MAZ_EP_fnc_systemMessage};
-			MAZ_ENV_attachedStrobe = _currentLightClass createVehicle position player;
-			call MAZ_ENV_fnc_attachStrobe;
-			playSound3D ['A3\Sounds_F_Orange\MissionSFX\Orange_Start_Sim.wss', player,false,getPosASL player,5,1,5,1];
-			player removeItem _currentLight;
-
-			if(!isNil "MAZ_ENV_EH_Killed_Strobe") then {
-				player removeEventHandler ["Killed",MAZ_ENV_EH_Killed_Strobe];	
-			};
-			MAZ_ENV_EH_Killed_Strobe = player addEventHandler ["Killed", {
-				call MAZ_ENV_fnc_deleteAttachedStrobeLight;
-			}];
-			if(!isNil "MAZ_ENV_EH_GetInMan_IRStrobe") then {
-				player removeEventHandler ["GetInMan",MAZ_ENV_EH_GetInMan_IRStrobe];
-			};
-			MAZ_ENV_EH_GetInMan_IRStrobe = player addEventHandler ["GetInMan", {
-				if (isNil "MAZ_ENV_attachedStrobe" || {isNull MAZ_ENV_attachedStrobe}) exitwith {};
-				detach MAZ_ENV_attachedStrobe;
-				MAZ_ENV_attachedStrobe setPos [0,0,0];
-			}];
-			if(!isNil "MAZ_ENV_EH_GetOutMan_IRStrobe") then {
-				player removeEventHandler ["GetOutMan",MAZ_ENV_EH_GetOutMan_IRStrobe];
-			};
-			MAZ_ENV_EH_GetOutMan_IRStrobe = player addEventHandler ["GetOutMan", {
-				if (isNil "MAZ_ENV_attachedStrobe" || {isNull MAZ_ENV_attachedStrobe}) exitwith {};
-				call MAZ_ENV_fnc_attachStrobe;
-			}];
-
-			private _timeToDelete = time + 300;
+			MAZ_ENV_strobeThrowable = _throwable select 0;
+            [_currentLightClass] call MAZ_ENV_fnc_createAttachedStrobe;
+			playSound3D ['A3\Sounds_F_Orange\MissionSFX\Orange_Start_Sim.wss', player,false,getPosASL player,5,1,7.5,1];
+			player removeItem MAZ_ENV_strobeThrowable;
+			["You turned on your IR Strobe."] call MAZ_EP_fnc_systemMessage;
+			private _timeToDelete = time + 240;
 			while {!isNull MAZ_ENV_attachedStrobe} do {
 				if(time >= _timeToDelete) then {
 					private _type = typeOf MAZ_ENV_attachedStrobe;
 					call MAZ_ENV_fnc_deleteAttachedStrobeLight;
-					MAZ_ENV_attachedStrobe = _type createVehicle [0,0,0];
-					call MAZ_ENV_fnc_attachStrobe;
-					_timeToDelete = time + 300;
+                    [_type] call MAZ_ENV_fnc_createAttachedStrobe;
+					_timeToDelete = time + 240;
 				};
 				sleep 1;
 			};
 		};
 
-		MAZ_ENV_fnc_attachStrobe = {
-			MAZ_ENV_attachedStrobe attachto [player, [0,-0.08,0.125], "pilot",true];
-		};
-
-		MAZ_ENV_fnc_deleteAttachedStrobeLight = {
+        MAZ_ENV_fnc_removeStrobeEH = {			
 			if(!isNil "MAZ_ENV_EH_Killed_Strobe") then {
 				player removeEventHandler ["Killed",MAZ_ENV_EH_Killed_Strobe];	
-			};
-			if(!isNil "MAZ_ENV_EH_GetOutMan_IRStrobe") then {
-				player removeEventHandler ["GetOutMan",MAZ_ENV_EH_GetOutMan_IRStrobe];
 			};
 			if(!isNil "MAZ_ENV_EH_GetInMan_IRStrobe") then {
 				player removeEventHandler ["GetInMan",MAZ_ENV_EH_GetInMan_IRStrobe];
 			};
-			deleteVehicle (nearestObject [getPos MAZ_ENV_attachedStrobe, "nvg_targetC"]);
-			deleteVehicle MAZ_ENV_attachedStrobe;
-			if(alive player) then {
-				playSound3D ['A3\Sounds_F_Orange\MissionSFX\Orange_Start_Sim.wss', player,false,getPosASL player,5,1,5,1];
-			};
 		};
 
-		MAZ_pointShootOnKeyDown = {
+		MAZ_ENV_fnc_createAttachedStrobe = {
+            params ["_strobeClassName"];
+            call MAZ_ENV_fnc_removeStrobeEH;
+            MAZ_ENV_EH_Killed_Strobe = player addEventHandler ["Killed", {
+				call MAZ_ENV_fnc_deleteAttachedStrobeLight;
+				call MAZ_ENV_fnc_removeStrobeEH;
+			}];
+            MAZ_ENV_EH_GetInMan_IRStrobe = player addEventHandler ["GetInMan", {
+				if (isNil "MAZ_ENV_attachedStrobe" || {isNull MAZ_ENV_attachedStrobe}) exitwith {};
+                call MAZ_ENV_fnc_deleteAttachedStrobeLight;
+				call MAZ_ENV_fnc_removeStrobeEH;
+                ["You turned off your IR Strobe."] call MAZ_EP_fnc_systemMessage;
+                playSound3D ['A3\Sounds_F_Orange\MissionSFX\Orange_Start_Sim.wss', player,false,getPosASL player,5,1,5,1];
+                player addItem MAZ_ENV_strobeThrowable;
+			}];
+            MAZ_ENV_attachedStrobe = _strobeClassName createVehicle [0,0,0];
+			MAZ_ENV_attachedStrobe attachto [player, [0,-0.08,0.125], "pilot",true];
+			MAZ_ENV_attachedStrobe addEventHandler ["Deleted", {
+				params ["_object"];
+				{
+					deleteVehicle _x;
+				}forEach (attachedObjects _object); 
+			}];
+		};
+
+		MAZ_ENV_fnc_deleteAttachedStrobeLight = {
+			deleteVehicle MAZ_ENV_attachedStrobe;
+		};
+
+		MAZ_ENV_fnc_pointShootOnKeyDown = {
 			params ["_displayOrControl", "_key", "_shift", "_ctrl", "_alt"];
 			if(_key != 42) exitWith {};
 			if (!(missionNamespace getVariable ["MAZ_ENV_heldDown",false]) && !(missionNamespace getVariable ["MAZ_ENV_holdBreathCooldown",false])) then {
 				MAZ_ENV_heldDown = true;
 				player setCustomAimCoef 0.3;
 				MAZ_holdBreathTime = time;
+				[] spawn {
+					if(true) exitWith {};
+					private _sound = playSound3D [format ["a3\sounds_f\characters\human-sfx\p02\breath_aiming_%1.wss",selectRandom ["1","2"]], player, false, getPosASL player, 5, 1, 5, 0, true];
+					sleep 1;
+					stopSound _sound;
+				};
 			};
 			if((time - MAZ_holdBreathTime) > 5 && !(missionNamespace getVariable ["MAZ_ENV_holdBreathCooldown",false])) then {
 				player setCustomAimCoef 1;
 				MAZ_ENV_holdBreathCooldown = true;
 				MAZ_ENV_heldDown = false;
-				0 = [] spawn {
+				[] spawn {
 					sleep (4 + (random 3));
 					MAZ_ENV_holdBreathCooldown = false;
 					player setCustomAimCoef 1;
+					'playSound3D [format ["a3\sounds_f\characters\human-sfx\p02\breath_aiming_%1.wss",selectRandom ["1","2"]], player, false, getPosASL player, 5, 1, 10, 1, true]';
 				};
 			};
 		};
 
-		MAZ_pointShootOnKeyUp = {
+		MAZ_ENV_fnc_pointShootOnKeyUp = {
 			params ["_displayOrControl", "_key", "_shift", "_ctrl", "_alt"];
 			if(_key != 42) exitWith {};
 			if (missionNamespace getVariable ["MAZ_ENV_heldDown",false]) then {
 				player setCustomAimCoef 1;
+				'playSound3D [format ["a3\sounds_f\characters\human-sfx\p02\breath_aiming_%1.wss",selectRandom ["1","2"]], player, false, getPosASL player, 5, 1, 10, 1, true]';
 				missionNamespace setVariable ["MAZ_ENV_heldDown",false];
 			};
 		};
 
-		MAZ_DEH_KeyDown_ENV_pointShoot = (findDisplay 46) displayAddEventHandler ["KeyDown", "_this call MAZ_pointShootOnKeyDown;"]; 
-		MAZ_DEH_KeyUp_ENV_pointShoot = (findDisplay 46) displayAddEventHandler ["KeyUp", "_this call MAZ_pointShootOnKeyUp;"]; 
+		MAZ_ENV_fnc_canPlaceIRMarker = {
+			if(vehicle player != player) exitWith {false};
+			private _throwable = currentThrowable player;
+			if(count _throwable == 0) exitWith {false};
+			if !((_throwable select 0) in ["B_IR_Grenade","O_R_IR_Grenade","O_IR_Grenade","I_E_IR_Grenade","I_IR_Grenade"]) exitWith {false};
+			private _frontPos = if(currentWeapon player == "" || weaponLowered player) then {
+				AGLtoASL (screenToWorld [0.5,0.5])
+			} else {
+				eyePos player vectorAdd ((player weaponDirection (currentWeapon player)) vectorMultiply 5);
+			};
+			private _intersects = lineIntersectsSurfaces [eyePos player,_frontPos,player];
+			if((count _intersects) == 0) exitWith {false};
+			(_intersects # 0) params ["_interPosASL","_surfaceNormal","","_interObject"];
+			if((_interPosASL distance (getPosASL player)) > 5) exitWith {false};
+			if(isNull _interObject) exitWith {false};
+			private _strAr = (str _interObject) splitString " ";
+			if(isNull _interObject || {(count _strAr > 1) && {((_strAr # 1) select [0,2]) in ["b_"]}}) exitWith {false};
+			if(_interObject isKindOf "CAManBase") exitWith {false};
+			true;
+		};
 
+		MAZ_ENV_fnc_addPickupStrobeAction = {
+			params ["_strobe"];
+			_strobe addAction [
+				"Pickup IR Marker",
+				{
+					params ["_target", "_caller", "_actionId", "_arguments"];
+					deleteVehicle _target;
+					player action ["TakeWeapon", objNull, primaryWeapon player];
+				},
+				nil,
+				1.5,
+				false,
+				true,
+				"",
+				"_this distance _target < 4"
+			];
+		};
+		
+		MAZ_ENV_fnc_addIRMarkerAction = {
+			if(!isNil "MAZ_ENV_StrobeMarker") then {
+				player removeAction MAZ_ENV_StrobeMarker;
+			};
+			MAZ_ENV_StrobeMarker = player addAction [
+				"Place IR Marker",
+				{
+					private _frontPos = if(currentWeapon player == "" || weaponLowered player) then {
+						AGLtoASL (screenToWorld [0.5,0.5])
+					} else {
+						eyePos player vectorAdd ((player weaponDirection (currentWeapon player)) vectorMultiply 5);
+					};
+					private _intersects = lineIntersectsSurfaces [eyePos player,_frontPos,player];
+					(_intersects # 0) params ["_interPosASL","_surfaceNormal","","_interObject"];
+					private _throwable = currentThrowable player;
+					if(count _throwable == 0) exitWith {["You don't have any grenades!"] call MAZ_EP_fnc_systemMessage};
+					private _currentLightClass = switch (_throwable select 0) do {
+						case "B_IR_Grenade": {"B_IRStrobe"};
+						case "O_R_IR_Grenade";
+						case "O_IR_Grenade": {"O_IRStrobe"};
+						case "I_E_IR_Grenade";
+						case "I_IR_Grenade": {"I_IRStrobe"};
+						default {""}
+					}; 
+					if(_currentLightClass == "") exitWith {};
+					player removeItem (_throwable select 0);
+					private _strobe = _currentLightClass createVehicle [0,0,0];
+					_strobe addEventHandler ["Deleted", {
+						params ["_object"];
+						{
+							deleteVehicle _x;
+						}forEach (attachedObjects _object); 
+					}];
+					player action ["TakeWeapon", objNull, primaryWeapon player];
+					if(_interObject in (nearestTerrainObjects [ASLtoAGL _interPosASL, [], 10, false, true])) exitWith {
+						_strobe setPosASL _interPosASL;
+					};
+					private _relPos = _interObject worldToModel (ASLtoAGL _interPosASL);
+					_strobe attachTo [_interObject,_relPos];
+				},
+				nil,
+				1.5,
+				false,
+				true,
+				"",
+				"call MAZ_ENV_fnc_canPlaceIRMarker"
+			];
+		};
+
+		if(!isNil "MAZ_ENV_DEH_KeyDown_pointShoot") then {
+			(findDisplay 46) displayRemoveEventHandler ["KeyDown",MAZ_ENV_DEH_KeyDown_pointShoot];
+		};
+		MAZ_ENV_DEH_KeyDown_pointShoot = (findDisplay 46) displayAddEventHandler ["KeyDown", {
+			_this call MAZ_ENV_fnc_pointShootOnKeyDown;
+		}]; 
+		if(!isNil "MAZ_ENV_DEH_KeyUp_pointShoot") then {
+			(findDisplay 46) displayRemoveEventHandler ["KeyUp",MAZ_ENV_DEH_KeyUp_pointShoot];
+		};
+		MAZ_ENV_DEH_KeyUp_pointShoot = (findDisplay 46) displayAddEventHandler ["KeyUp", {
+			_this call MAZ_ENV_fnc_pointShootOnKeyUp;
+		}]; 
+
+		if(!isNil "MAZ_ENV_MEH_Draw3D_WeaponOptics") then {
+			removeMissionEventHandler ["Draw3D",MAZ_ENV_MEH_Draw3D_WeaponOptics];
+		};
 		MAZ_ENV_MEH_Draw3D_WeaponOptics = addMissionEventHandler ["Draw3D", {
 			call {
 				comment "
@@ -423,7 +538,6 @@ private _value = (str {
 			};
 		}];
 
-		
 		MAZ_ENV_fnc_toggleWhitePhosor= {
 			private _whitePhosor = player getVariable "MAZ_ENV_toggleWhitePhosor";
 			player setVariable ["MAZ_ENV_toggleWhitePhosor",(!_whitePhosor)];
@@ -431,10 +545,15 @@ private _value = (str {
 		};
 		player setVariable ["MAZ_ENV_toggleWhitePhosor",false];
 
-
+		if(!isNil "MAZ_ENV_MEH_Draw3D_WhitePhosphor") then {
+			removeMissionEventHandler ["Draw3D",MAZ_ENV_MEH_Draw3D_WhitePhosphor];
+		};
 		MAZ_ENV_MEH_Draw3D_WhitePhosphor = addMissionEventHandler ["Draw3D", {
 			call {
-				if(!MAZ_EP_enhancedNightVisionEnabled) exitWith {MAZ_PP_ColorCorrect_NVG ppEffectEnable false;};
+				if(!MAZ_EP_enhancedNightVisionEnabled || !isNull (findDisplay 312)) exitWith {
+					MAZ_PP_FilmGrain_NVG ppEffectEnable false;
+					MAZ_PP_ColorCorrect_NVG ppEffectEnable false;
+				};
 				if(currentVisionMode player == 0) then {
 					if(!isNil "MAZ_PP_FilmGrain_NVG") then {	
 						MAZ_PP_FilmGrain_NVG ppEffectEnable false;
@@ -444,8 +563,8 @@ private _value = (str {
 					if(isNil "MAZ_PP_FilmGrain_NVG") then {
 						MAZ_PP_FilmGrain_NVG = ppEffectCreate ["FilmGrain",2000];
 					};
-					private _grainIntensity = 0.42 + (0.32 * (1 - overcast));
-					private _sharpness = 0.71 + (0.22 * (1 - overcast));
+					private _grainIntensity = 0.27 + (0.32 * (1 - overcast));
+					private _sharpness = 0.56 + (0.22 * (1 - overcast));
 					MAZ_PP_FilmGrain_NVG ppEffectEnable true;
 					MAZ_PP_FilmGrain_NVG ppEffectForceInNVG true;
 					MAZ_PP_FilmGrain_NVG ppEffectAdjust [_grainIntensity,_sharpness,1,0.64,0.24,true];
@@ -481,8 +600,7 @@ private _value = (str {
 			params ["_person", "_visionMode", "_TIindex", "_visionModePrev", "_TIindexPrev", "_vehicle", "_turret"];
 			if(!MAZ_EP_enhancedNightVisionEnabled) exitWith {};
 			if(_visionModePrev == 0) then {
-				playSound3D ['A3\ui_f_curator\data\sound\CfgSound\visionMode.wss', _person,false,getPosASL _person,5,1,2];
-				playSound3D ['a3\sounds_f_mark\arsenal\sfx\bipods\bipod_op_down.wss', _person,false,getPosASL _person,5,1,2];
+				playSound3D ['A3\ui_f_curator\data\sound\CfgSound\visionMode.wss', _person,false,getPosASL _person,5,1,4];
 				if !(call MAZ_ENV_fnc_canEnter3PP) then {
 					if(cameraView == "External") then {
 						player switchCamera "Internal";
@@ -492,6 +610,7 @@ private _value = (str {
 			if(_visionMode > 1) then {
 				player action ["nvGogglesOff", player];
 			};
+			playSound3D ['a3\sounds_f_mark\arsenal\sfx\bipods\bipod_op_down.wss', _person,false,getPosASL _person,5,1,3,0.1];
 		}];
 		if(!isNil "MAZ_ENV_DEH_KeyDown_firstPerson") then {
 			(findDisplay 46) displayRemoveEventHandler ["KeyDown",MAZ_ENV_DEH_KeyDown_firstPerson];
@@ -512,15 +631,31 @@ private _value = (str {
 				player switchCamera "Internal";
 			};
 		}];
+		if(!isNil "MAZ_ENV_EH_Respawn_IRMarker") then {
+			player removeEventHandler ["Respawn",MAZ_ENV_EH_Respawn_IRMarker];
+		};
+		MAZ_ENV_EH_Respawn_IRMarker = player addEventHandler ["Respawn", {
+			call MAZ_ENV_fnc_addIRMarkerAction;
+		}];
 
-		0 = [] spawn {
+		[] spawn {
 			waitUntil {uisleep 0.1;!isNull (findDisplay 46) && alive player};
 			sleep 0.1;
 			waitUntil {!isNil "MAZ_fnc_newKeybind"};
 			MAZ_Key_ENV_ToggleIRIlluminator = ["Toggle IR Illuminator","Turn on or off the IR Illuminator.",38,{call MAZ_ENV_fnc_toggleIRIlluminator;},false,true,false,true,false,"MAZ_IRIllum"] call MAZ_fnc_newKeybind;
 			MAZ_Key_ENV_ToggleIRIlluminatorDiffuseMode = ["Toggle IR Diffuser","Turn on or off the IR diffuser.",38,{call MAZ_ENV_fnc_toggleIRIlluminatorDiffuseMode;},false,false,true,true,false,"MAZ_IRIllumMode"] call MAZ_fnc_newKeybind;
 			MAZ_Key_ENV_AttachStrobe = ["Toggle Attached Strobe","Attach/Detach current selected IR strobe to helmet.",34,{[] spawn MAZ_ENV_fnc_attachStrobeLightToHelmet;},false,false,true,true,false,"MAZ_IRStrobe"] call MAZ_fnc_newKeybind; 
-			'MAZ_Key_ENV_WhitePhosphor = ["White Phosphor NVG","Toggles the white phosphor on NVGs.",49,{call MAZ_ENV_fnc_toggleWhitePhosor;},false,true,false,true,false,"MAZ_phosphor"] call MAZ_fnc_newKeybind';
+			MAZ_Key_ENV_WhitePhosphor = ["White Phosphor NVG","Toggles the white phosphor on NVGs.",49,{call MAZ_ENV_fnc_toggleWhitePhosor;},false,true,false,true,false,"MAZ_phosphor"] call MAZ_fnc_newKeybind;
+
+			call MAZ_ENV_fnc_addIRMarkerAction;
+			if(!isNil "MAZ_DEH_KeyDown_LaserSound") then {
+				(findDisplay 46) displayRemoveEventHandler ["KeyDown",MAZ_DEH_KeyDown_LaserSound];
+			};
+			MAZ_DEH_KeyDown_LaserSound = (findDisplay 46) displayAddEventHandler ["KeyDown", {
+				params ["_display","_key"];
+				if !(_key in (actionKeys "headlights")) exitWith {};
+				call MAZ_ENV_fnc_toggleLaserSound;
+			}];
 		};
 
 		if(isServer) then {
